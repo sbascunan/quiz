@@ -62,11 +62,11 @@ function home(){
   conns={};conn=null;G=null;MODE="off";
   A.innerHTML=`<h1>Duelo de matemáticas</h1><p class="mut">Cuestionarios cronometrados para aprender y competir.</p>
 <div class="card"><h3>Qué quieren jugar</h3>${cfg()}</div>
-<div class="card"><h3>Práctica offline</h3><p class="mut">Tú solo, sin internet. Cada ronda termina con un podio.</p><button class="btn" data-act="off">Empezar</button></div>
+<div class="card"><h3>Práctica local</h3><p class="mut">Solo tú.</p><button class="btn" data-act="off">Empezar</button></div>
 <div class="card"><h3>Sala en vivo</h3><p class="mut">Todos responden a la vez; nadie avanza hasta que todos contestan (o se acaba el tiempo).</p>
 <input id="nm" placeholder="Tu nombre" maxlength="16" autocomplete="off"><div class="row"><button class="btn" data-act="host">Crear sala</button><input id="cd" placeholder="Código" maxlength="4" autocomplete="off" autocapitalize="characters" style="width:6em;text-transform:uppercase"><button data-act="join">Unirme</button></div><div id="msg"></div></div>`}
 
-// ===== MOTOR (el modo offline es una partida local con un solo jugador) =====
+// ===== MOTOR (el modo local es una partida local con un solo jugador) =====
 let peer=null,conns={},conn=null,PL={},S_={names:[],na:0,pend:[]},me="",isHost=false,G=null,code="",myA=null,key="",scores={},hostT=null,tries=0;
 const mid=()=>isHost?"host":(peer&&peer.id);
 const vA=a=>!!(a&&G&&G.ph==="q"&&a.g===G.gid&&a.i===G.i&&a.r===G.r);
