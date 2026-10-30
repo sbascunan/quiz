@@ -2,7 +2,7 @@
 <html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#e8590c">
-<title>Quiz War</title>
+<title>Duelo de Preguntas</title>
 <style>
 :root{--bg:#fff8f1;--fg:#2b1d12;--card:#fff;--mut:#7a6556;--ac:#e8590c;--on:#fff;--bd:#f3d9c4;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 @media(prefers-color-scheme:dark){:root{--bg:#1a120c;--fg:#f6ebe0;--card:#261a12;--mut:#b79f8b;--ac:#ff922b;--on:#1a120c;--bd:#4a3322;color-scheme:dark}}
@@ -29,26 +29,94 @@ button{cursor:pointer}button:disabled{cursor:default}
 @media(hover:hover){.opt:not(:disabled):hover{background:var(--bd)}}
 .code{font-size:2.6rem;letter-spacing:.3em;font-weight:800;color:var(--ac)}
 ol.bd{padding-left:1.4em}ol.bd li{margin:.2em 0}ol.bd li.me{font-weight:700;color:var(--ac)}
-#msg{color:#e03131;min-height:1.4em}
+#msg,#amsg{color:#e03131;min-height:1.4em;font-size:.9rem}
 .pod{display:flex;justify-content:center;align-items:flex-end;gap:10px;margin:14px 0}.pc{text-align:center;flex:1;max-width:150px;min-width:0}.pc .m{font-size:2rem}.pc .nm{font-weight:700;overflow-wrap:anywhere}.pc .st{background:var(--ac);border-radius:8px 8px 0 0;margin-top:4px}
+.badge{display:inline-block;padding:3px 8px;border-radius:6px;background:var(--bd);font-size:.85rem;font-weight:600}
 </style></head><body><div class="w">
-<div><button data-act="home">← Inicio</button></div>
+<div class="top"><button data-act="home">← Inicio</button><span id="ubadge"></span></div>
 <div id="app"></div></div>
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js" async></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="preguntas.js"></script>
 <script>
+// Para activar Google Sign-In en producción, reemplace con su Client ID de Google Cloud Console:
+const GOOGLE_CLIENT_ID="";
+
 const $=s=>document.querySelector(s),A=$("#app");
 const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
 const SYM=["▲","◆","●","■"],AR=id=>AREAS.filter(a=>a.id===id)[0];
-// Una "entrada" es [área, nivel, índice, semilla]; todos los jugadores la resuelven igual.
+
+// ===== AUTENTICACIÓN Y GESTIÓN DE USUARIOS =====
+let USER=null;
+try{USER=JSON.parse(localStorage.getItem("dp_session"))}catch(e){}
+function saveSession(u){USER=u;try{if(u)localStorage.setItem("dp_session",JSON.stringify(u));else localStorage.removeItem("dp_session")}catch(e){}renderBadge()}
+function renderBadge(){const b=$("#ubadge");if(!b)return;b.innerHTML=USER?`<span class="badge">👤 ${esc(USER.n)} (${USER.t})</span> <button data-act="logout" style="padding:4px 8px;font-size:.85rem">Salir</button>`:""}
+
+async function sha256(str){
+  const buf=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+function validPwd(p){return p.length>=8&&/[A-Z]/.test(p)&&/[a-z]/.test(p)&&/[0-9]/.test(p)}
+async function authReg(){
+  const u=($("#au").value||"").trim(),p=$("#ap").value||"",m=$("#amsg");
+  if(u.length<3)return m.textContent="El usuario debe tener al menos 3 caracteres.";
+  if(!validPwd(p))return m.textContent="La contraseña requiere mínimo 8 caracteres, mayúscula, minúscula y número.";
+  let db={};try{db=JSON.parse(localStorage.getItem("dp_users")||"{}")}catch(e){}
+  const k=u.toLowerCase();if(db[k])return m.textContent="Ese nombre de usuario ya está registrado.";
+  const salt=Math.random().toString(36).slice(2,10),h=await sha256(salt+":"+p);
+  db[k]={n:u,s:salt,h:h};try{localStorage.setItem("dp_users",JSON.stringify(db))}catch(e){}
+  saveSession({n:u,t:"Cuenta"});home();
+}
+async function authLogin(){
+  const u=($("#au").value||"").trim(),p=$("#ap").value||"",m=$("#amsg");
+  let db={};try{db=JSON.parse(localStorage.getItem("dp_users")||"{}")}catch(e){}
+  const r=db[u.toLowerCase()];if(!r)return m.textContent="Usuario no encontrado.";
+  const h=await sha256(r.s+":"+p);if(h!==r.h)return m.textContent="Contraseña incorrecta.";
+  saveSession({n:r.n,t:"Cuenta"});home();
+}
+function initGoogle(){
+  const gBox=$("#gbtn");if(!gBox)return;
+  if(!GOOGLE_CLIENT_ID){
+    gBox.innerHTML=`<button data-act="gdemo">Iniciar sesión con Google</button>`;return;
+  }
+  if(window.google&&google.accounts&&google.accounts.id){
+    google.accounts.id.initialize({
+      client_id:GOOGLE_CLIENT_ID,
+      callback:res=>{
+        try{
+          const payload=JSON.parse(atob(res.credential.split(".")[1].replace(/-/g,"+").replace(/_/g,"/")));
+          saveSession({n:(payload.name||payload.email||"Usuario").slice(0,16),t:"Google"});home();
+        }catch(e){}
+      }
+    });
+    google.accounts.id.renderButton(gBox,{theme:"outline",size:"large"});
+  }
+}
+function googleFallback(){
+  const m=$("#amsg");
+  if(!GOOGLE_CLIENT_ID&&m)m.textContent="Configure GOOGLE_CLIENT_ID en index.html para OAuth real, o use el acceso con contraseña segura.";
+}
+
+// ===== GESTIÓN DE RÉCORDS =====
+function recKey(){return "ag2-"+selA+selL+"-"+selN+"-"+selR}
+function getRec(k){
+  try{
+    const raw=localStorage.getItem(k);if(!raw)return{p:0,n:""};
+    if(raw[0]==="{")return JSON.parse(raw);
+    return{p:+raw||0,n:"Anónimo"};
+  }catch(e){return{p:0,n:""}}
+}
+function setRec(k,p,n){try{localStorage.setItem(k,JSON.stringify({p:p,n:n||"Anónimo"}))}catch(e){}}
+
+// ===== MOTOR DE PREGUNTAS =====
 const QQ=e=>{const x=BANK[e[0]][e[1]][e[2]],r=rng(e[3]);if(typeof x==="function")return x(r);const o=shr(r,x.o.map((t,k)=>[t,k]));return{q:x.q,e:x.e,o:o.map(a=>a[0]),c:o.map(a=>a[1]).indexOf(x.c)}};
 const TT=e=>AR(e[0]).T[e[1]]||30,LB=e=>AR(e[0]).n+" · "+AR(e[0]).L[e[1]];
-let MODE="off",selA="ga",selL=-1,selN=5,selR=3,tick=null,t0=0,curT=20;
+let MODE="off",selA="ga",selL=-1,selN=5,selR=3,tick=null,t0=0,curT=20,lastRecKey="";
 const pts=ms=>Math.round(1000*(1-.5*Math.min(ms,curT*1000)/(curT*1000)));
 const msg=t=>{const m=$("#msg");if(m)m.textContent=t};
 const lvOpts=()=>selA==="*"?`<option value="-1">Progresivo (fácil → difícil, en cada área)</option>`:`<option value="-1"${selL<0?" selected":""}>Progresivo (fácil → difícil)</option>`+AR(selA).L.map((l,i)=>`<option value="${i}"${selL===i?" selected":""}>${i+1}. ${l} (${AR(selA).T[i]} s)</option>`).join("");
 const cfg=()=>`<select id="ar">${AREAS.map(a=>`<option value="${a.id}"${a.id===selA?" selected":""}>${a.n}</option>`).join("")}<option value="*"${selA==="*"?" selected":""}>Mezcla de todas las áreas</option></select> <select id="lv">${lvOpts()}</select><div class="row"><label>Preguntas por ronda <input id="n" type="number" value="${selN}" min="3" max="20" style="width:4.5em"></label><select id="rr"><option value="3"${selR===3?" selected":""}>Partida completa (3 rondas)</option><option value="1"${selR===1?" selected":""}>Una sola ronda</option></select></div>`;
-// Arma las rondas sin repetir preguntas fijas dentro de la partida.
+
 function mkRounds(a,l,n,R){const used={},out=[];for(let r=0;r<R;r++){const rd=[];for(let j=0;j<n;j++){
   const aa=a==="*"?AREAS[Math.random()*AREAS.length|0].id:a,nl=AR(aa).L.length,ll=(l<0||a==="*")?Math.min(nl-1,Math.floor(j/n*nl)):l;
   const pool=BANK[aa][ll],free=[];pool.forEach((x,i)=>{if(typeof x==="function"||!used[aa+ll+i])free.push(i)});
@@ -57,16 +125,28 @@ function mkRounds(a,l,n,R){const used={},out=[];for(let r=0;r<R;r++){const rd=[]
 function qHTML(e,hd,s){const q=QQ(e);return `<div class="top"><span>${esc(hd)}</span><span id="sec"></span></div><div class="mut">${esc(LB(e))}</div><div class="bar"><i id="bar"></i></div><h2>${esc(q.q)}</h2><div class="opts">${q.o.map((t,k)=>`<button class="opt${s.rev&&k!==q.c?" dim":""}${s.sel===k?" sel":""}${s.rev&&k===q.c?" ok":""}" data-c="${k}"${s.dis?" disabled":""}><b>${SYM[k]}</b> ${esc(t)}</button>`).join("")}</div>`}
 function startClock(T,onEnd){clearInterval(tick);curT=T;t0=Date.now();tick=setInterval(()=>{const e=(Date.now()-t0)/1000,b=$("#bar"),s=$("#sec");if(b)b.style.width=Math.max(0,100-e/T*100)+"%";if(s)s.textContent=Math.max(0,Math.ceil(T-e))+" s";if(e>=T){clearInterval(tick);if(onEnd)onEnd()}},100)}
 
+function authCard(){
+  if(USER)return "";
+  return `<div class="card"><h3>Cuenta y registro de récords</h3><p class="mut">Inicie sesión con Google o con una cuenta protegida por contraseña para asociar su nombre a cada récord automáticamente.</p>
+  <div class="row"><input id="au" placeholder="Usuario" maxlength="16" autocomplete="username"><input id="ap" type="password" placeholder="Contraseña segura" autocomplete="current-password"></div>
+  <div class="row"><button class="btn" data-act="login">Iniciar sesión</button><button data-act="reg">Crear cuenta</button><span id="gbtn"></span></div>
+  <div id="amsg"></div></div>`;
+}
+
 function home(){
   clearInterval(tick);clearTimeout(hostT);if(peer){try{peer.destroy()}catch(e){}peer=null}
-  conns={};conn=null;G=null;MODE="off";
-  A.innerHTML=`<h1>Duelo de matemáticas</h1><p class="mut">Cuestionarios cronometrados para aprender y competir.</p>
-<div class="card"><h3>Qué quieren jugar</h3>${cfg()}</div>
-<div class="card"><h3>Práctica local</h3><p class="mut">Solo tú.</p><button class="btn" data-act="off">Empezar</button></div>
+  conns={};conn=null;G=null;MODE="off";renderBadge();
+  const curRec=getRec(recKey());
+  A.innerHTML=`<h1>Duelo de Preguntas</h1><p class="mut">Cuestionarios cronometrados para aprender y competir.</p>
+${authCard()}
+<div class="card"><h3>Configuración de partida</h3>${cfg()}<p class="mut" id="recinfo">${curRec.p?`Récord actual en esta configuración: <b>${curRec.p}</b> (${esc(curRec.n)})`:"Sin récord registrado en esta configuración."}</p></div>
+<div class="card"><h3>Práctica local</h3><p class="mut">Partida individual con registro de récords.</p><button class="btn" data-act="off">Empezar</button></div>
 <div class="card"><h3>Sala en vivo</h3><p class="mut">Todos responden a la vez; nadie avanza hasta que todos contestan (o se acaba el tiempo).</p>
-<input id="nm" placeholder="Tu nombre" maxlength="16" autocomplete="off"><div class="row"><button class="btn" data-act="host">Crear sala</button><input id="cd" placeholder="Código" maxlength="4" autocomplete="off" autocapitalize="characters" style="width:6em;text-transform:uppercase"><button data-act="join">Unirme</button></div><div id="msg"></div></div>`}
+<input id="nm" placeholder="Su nombre" maxlength="16" value="${USER?esc(USER.n):""}" autocomplete="off"><div class="row"><button class="btn" data-act="host">Crear sala</button><input id="cd" placeholder="Código" maxlength="4" autocomplete="off" autocapitalize="characters" style="width:6em;text-transform:uppercase"><button data-act="join">Unirme</button></div><div id="msg"></div></div>`;
+  initGoogle();
+}
 
-// ===== MOTOR (el modo local es una partida local con un solo jugador) =====
+// ===== MOTOR EN VIVO Y LOCAL =====
 let peer=null,conns={},conn=null,PL={},S_={names:[],na:0,pend:[]},me="",isHost=false,G=null,code="",myA=null,key="",scores={},hostT=null,tries=0;
 const mid=()=>isHost?"host":(peer&&peer.id);
 const vA=a=>!!(a&&G&&G.ph==="q"&&a.g===G.gid&&a.i===G.i&&a.r===G.r);
@@ -74,9 +154,9 @@ const gQ=()=>G.rounds[G.r][G.i];
 function bc(){const v=Object.keys(PL).map(k=>PL[k]);S_={t:"s",g:G,names:v.map(p=>p.n),na:v.filter(p=>vA(p.a)).length,pend:v.filter(p=>!vA(p.a)).map(p=>p.n)};Object.keys(conns).forEach(k=>{try{if(conns[k].open)conns[k].send(S_)}catch(e){}})}
 function setG(g){G=g;bc();sync()}
 function sync(){if(G&&G.ph==="q"){const k=G.gid+":"+G.r+":"+G.i;if(k!==key){key=k;myA=null;startClock(TT(gQ()),()=>{if(isHost)hostReveal();else liveView()})}}liveView()}
-function startOff(){MODE="off";isHost=true;PL={host:{n:"Tú"}};conns={};peer=null;hostStart()}
+function startOff(){MODE="off";isHost=true;PL={host:{n:USER?USER.n:"Jugador"}};conns={};peer=null;hostStart()}
 function enter(host){
-  const nm=$("#nm").value.trim().slice(0,16);if(!nm)return msg("Escribe tu nombre.");
+  const nm=$("#nm").value.trim().slice(0,16);if(!nm)return msg("Escriba su nombre.");
   if(!window.Peer)return msg("El modo en vivo necesita internet (no se pudo cargar PeerJS).");
   isHost=host;me=nm;G=null;myA=null;key="";scores={};PL={};conns={};tries=0;MODE="live";
   if(host)openHost();else{code=$("#cd").value.trim().toUpperCase();if(code.length!==4)return msg("El código tiene 4 letras.");openGuest()}}
@@ -88,16 +168,15 @@ function openHost(){
     c.on("data",m=>{if(!m)return;if(m.t==="join")PL[c.peer]={n:String(m.n).slice(0,16)};else if(m.t==="ans"&&PL[c.peer])PL[c.peer].a=m.a;bc();checkAll();liveView()});
     c.on("close",()=>{delete conns[c.peer];delete PL[c.peer];bc();checkAll();liveView()})})}
 function openGuest(){
-  msg("Conectando…");peer=new Peer();const fail=setTimeout(()=>msg("No se pudo conectar. Revisa el código."),12000);
+  msg("Conectando…");peer=new Peer();const fail=setTimeout(()=>msg("No se pudo conectar. Revise el código."),12000);
   peer.on("error",e=>{clearTimeout(fail);msg(e.type==="peer-unavailable"?"Sala no encontrada.":"Error de red: "+e.type)});
   peer.on("open",()=>{conn=peer.connect("agq-"+code,{reliable:true});
     conn.on("open",()=>{clearTimeout(fail);conn.send({t:"join",n:me})});
     conn.on("data",m=>{if(m&&m.t==="s"){S_=m;G=m.g;sync()}});
     conn.on("close",()=>{clearInterval(tick);A.innerHTML=`<div class="card"><b>Se perdió la conexión con el anfitrión.</b></div><button class="btn" data-act="home">Inicio</button>`})})}
 function hostTimer(){clearTimeout(hostT);hostT=setTimeout(hostReveal,TT(gQ())*1000+1500)}
-// Se revela cuando TODOS respondieron (o se acaba el tiempo).
 function checkAll(){if(!isHost||!G||G.ph!=="q")return;const v=Object.keys(PL).map(k=>PL[k]);if(v.length&&v.every(p=>vA(p.a)))hostReveal()}
-function hostStart(){const n=Math.max(1,Math.min(+$("#n").value||5,20));scores={};Object.keys(PL).forEach(k=>{PL[k].a=null});
+function hostStart(){const n=Math.max(1,Math.min(+$("#n").value||5,20));selN=n;scores={};Object.keys(PL).forEach(k=>{PL[k].a=null});
   setG({ph:"q",gid:Math.random().toString(36).slice(2,7),rounds:mkRounds(selA,selL,n,selR),r:0,i:0,sc:{}});hostTimer()}
 function hostReveal(){if(!G||G.ph!=="q")return;clearTimeout(hostT);clearInterval(tick);const q=QQ(gQ());
   Object.keys(PL).forEach(k=>{const a=PL[k].a,pv=scores[k]||{p:0,rp:0,st:0},good=vA(a)&&a.c===q.c,st=good?pv.st+1:0,add=good?pts(a.ms)+Math.min(st-1,5)*50:0;
@@ -105,8 +184,18 @@ function hostReveal(){if(!G||G.ph!=="q")return;clearTimeout(hostT);clearInterval
   setG(Object.assign({},G,{ph:"rev",sc:scores}))}
 function hostNext(){if(G.ph==="rev"){if(G.i+1<G.rounds[G.r].length){setG(Object.assign({},G,{ph:"q",i:G.i+1}));hostTimer()}else setG(Object.assign({},G,{ph:"pod"}));return}
   if(G.r+1<G.rounds.length){Object.keys(scores).forEach(k=>{scores[k].rp=0});setG(Object.assign({},G,{ph:"q",r:G.r+1,i:0,sc:scores}));hostTimer();return}
-  let best=0;if(MODE==="off")try{const k="ag2-"+selA+selL+"-"+selN+"-"+selR,t=scores.host?scores.host.p:0;best=+localStorage.getItem(k)||0;if(t>best){localStorage.setItem(k,t);best=t}}catch(e){}
-  setG(Object.assign({},G,{ph:"end",best:best}))}
+  let rec={p:0,n:""},isNew=false;
+  if(MODE==="off"){
+    lastRecKey=recKey();rec=getRec(lastRecKey);const t=scores.host?scores.host.p:0;
+    if(t>rec.p){isNew=true;rec={p:t,n:USER?USER.n:"Jugador"};setRec(lastRecKey,rec.p,rec.n)}
+  }
+  setG(Object.assign({},G,{ph:"end",best:rec.p,bestN:rec.n,newRec:isNew}))}
+function saveRecName(){
+  const inp=$("#recnm");if(!inp||!G)return;
+  const nm=inp.value.trim().slice(0,16)||"Jugador";
+  setRec(lastRecKey,G.best,nm);G.bestN=nm;G.newRec=false;
+  if(scores.host)scores.host.n=nm;liveView();
+}
 function livePick(c){if(!G||G.ph!=="q"||myA||(Date.now()-t0)/1000>=curT)return;myA={i:G.i,g:G.gid,r:G.r,c:c,ms:Date.now()-t0};
   if(isHost){PL.host.a=myA;bc();checkAll()}else if(conn)conn.send({t:"ans",a:myA});liveView()}
 const rows=(sc,k)=>Object.keys(sc||{}).map(i=>[i,sc[i]]).sort((a,b)=>b[1][k]-a[1][k]);
@@ -116,9 +205,11 @@ function podium(sc,k){const t=rows(sc,k),H=[110,80,55],M=["🥇","🥈","🥉"];
 const nextBtn=t=>isHost?`<button class="btn" data-act="next">${t}</button>`:`<p class="mut">Esperando al anfitrión…</p>`;
 function liveView(){
   if(!G&&!peer)return;
-  if(!G||G.ph==="lobby"){A.innerHTML=`<div class="card"><div class="mut">Código de sala</div><div class="code">${esc(code)}</div><p class="mut">Pásale a tu amigo el enlace de esta página y este código.</p><h3>Jugadores (${S_.names.length})</h3><p>${S_.names.map(esc).join(" · ")||"…"}</p>${isHost?cfg()+`<div><button class="btn" data-act="start">Empezar</button></div>`:`<p class="mut">Esperando al anfitrión…</p>`}</div>`;return}
+  if(!G||G.ph==="lobby"){A.innerHTML=`<div class="card"><div class="mut">Código de sala</div><div class="code">${esc(code)}</div><p class="mut">Comparta el enlace de esta página y este código.</p><h3>Jugadores (${S_.names.length})</h3><p>${S_.names.map(esc).join(" · ")||"…"}</p>${isHost?cfg()+`<div><button class="btn" data-act="start">Empezar</button></div>`:`<p class="mut">Esperando al anfitrión…</p>`}</div>`;return}
   const R=G.rounds.length;
-  if(G.ph==="end"){A.innerHTML=`<h2>🏆 Resultado final</h2>`+podium(G.sc,"p")+(G.best?`<p class="mut">Tu mejor marca con esta configuración: ${G.best}</p>`:"")+`<button class="btn" data-act="home">Salir</button>`;return}
+  if(G.ph==="end"){
+    const promptRec=(G.newRec&&!USER)?`<div class="card good"><b>¡Nuevo récord! (${G.best} pts)</b><p class="mut">Escriba su nombre para registrar la marca:</p><div class="row"><input id="recnm" placeholder="Su nombre" maxlength="16"><button class="btn" data-act="saverec" style="margin-top:0">Guardar récord</button></div></div>`:(G.newRec?`<div class="card good"><b>¡Nuevo récord registrado a nombre de ${esc(G.bestN)}: ${G.best} pts!</b></div>`:"");
+    A.innerHTML=`<h2>🏆 Resultado final</h2>`+podium(G.sc,"p")+promptRec+(G.best?`<p class="mut">Mejor marca en esta configuración: <b>${G.best}</b> (${esc(G.bestN)})</p>`:"")+`<button class="btn" data-act="home">Salir</button>`;return}
   if(G.ph==="pod"){A.innerHTML=`<h2>Podio de la ronda ${G.r+1}/${R}</h2>`+podium(G.sc,"rp")+(R>1?`<div class="card"><h3>Acumulado</h3>${board(G.sc,"p")}</div>`:"")+nextBtn(G.r+1<R?"Siguiente ronda":"Ver resultado final");return}
   const e=gQ(),q=QQ(e),n=G.rounds[G.r].length,hd=(R>1?"Ronda "+(G.r+1)+"/"+R+" · ":"")+"Pregunta "+(G.i+1)+"/"+n;
   if(G.ph==="q"){const up=(Date.now()-t0)/1000>=curT;
@@ -126,11 +217,12 @@ function liveView(){
   const a=myA&&myA.g===G.gid&&myA.i===G.i&&myA.r===G.r?myA:null,good=a&&a.c===q.c;
   A.innerHTML=qHTML(e,hd,{rev:1,sel:a?a.c:-1,dis:1})+`<div class="card ${good?"good":"bad"}"><b>${good?"¡Correcto!":a?"Incorrecto":"Sin respuesta"}</b><p>${esc(q.e)}</p></div>`+(S_.names.length>1?`<div class="card"><h3>Ranking</h3>${board(G.sc,"p")}</div>`:`<p class="mut">Puntos: <b>${G.sc.host?G.sc.host.p:0}</b></p>`)+nextBtn(G.i+1<n?"Siguiente":"Ver podio de la ronda");
 }
-const ACT={off:startOff,host:()=>enter(true),join:()=>enter(false),start:hostStart,next:hostNext,home:home};
+const ACT={off:startOff,host:()=>enter(true),join:()=>enter(false),start:hostStart,next:hostNext,home:home,reg:authReg,login:authLogin,logout:()=>{saveSession(null);home()},gdemo:googleFallback,saverec:saveRecName};
 document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b||b.disabled)return;
-  if(b.dataset.c!==undefined){const c=+b.dataset.c;if(MODE==="off")livePick(c);else livePick(c);return}
+  if(b.dataset.c!==undefined){livePick(+b.dataset.c);return}
   const f=ACT[b.dataset.act];if(f)f()});
 document.addEventListener("change",e=>{const i=e.target.id,v=e.target.value;
-  if(i==="ar"){selA=v;selL=-1;$("#lv").innerHTML=lvOpts()}else if(i==="lv")selL=+v;else if(i==="n")selN=Math.max(3,Math.min(+v||5,20));else if(i==="rr")selR=+v});
+  if(i==="ar"){selA=v;selL=-1;$("#lv").innerHTML=lvOpts()}else if(i==="lv")selL=+v;else if(i==="n")selN=Math.max(3,Math.min(+v||5,20));else if(i==="rr")selR=+v;
+  const ri=$("#recinfo");if(ri){const r=getRec(recKey());ri.innerHTML=r.p?`Récord actual en esta configuración: <b>${r.p}</b> (${esc(r.n)})`:"Sin récord registrado en esta configuración."}});
 home();
 </script></body></html>
