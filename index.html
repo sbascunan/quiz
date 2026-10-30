@@ -30,160 +30,107 @@ button{cursor:pointer}button:disabled{cursor:default}
 .code{font-size:2.6rem;letter-spacing:.3em;font-weight:800;color:var(--ac)}
 ol.bd{padding-left:1.4em}ol.bd li{margin:.2em 0}ol.bd li.me{font-weight:700;color:var(--ac)}
 #msg{color:#e03131;min-height:1.4em}
+.pod{display:flex;justify-content:center;align-items:flex-end;gap:10px;margin:14px 0}.pc{text-align:center;flex:1;max-width:150px;min-width:0}.pc .m{font-size:2rem}.pc .nm{font-weight:700;overflow-wrap:anywhere}.pc .st{background:var(--ac);border-radius:8px 8px 0 0;margin-top:4px}
 </style></head><body><div class="w">
 <div><button data-act="home">← Inicio</button></div>
 <div id="app"></div></div>
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js" async></script>
+<script src="preguntas.js"></script>
 <script>
-// ===== NIVELES (de más fácil a más difícil) =====
-// Para agregar un nivel: añade su nombre en LN, su tiempo en TL y sus preguntas en BANK.
-// Pregunta: {q: enunciado, o: [4 opciones], c: índice correcto (0-3), e: explicación}
-const LN={1:"Súper fácil",2:"Fácil",3:"Normal",4:"Difícil",5:"Français (difficile)",6:"Grothendieck"};
-const TL={1:15,2:20,3:25,4:35,5:40,6:45}; // segundos por pregunta
-const BANK={
-1:[
-{q:"La geometría algebraica estudia principalmente las soluciones de…",o:["Ecuaciones diferenciales","Sistemas de ecuaciones polinomiales","Desigualdades lineales","Series de Fourier"],c:1,e:"Estudia conjuntos de ceros de polinomios y su geometría."},
-{q:"¿Qué figura describe x² + y² = 1 en el plano real?",o:["Una parábola","Una recta","Una circunferencia","Una hipérbola"],c:2,e:"Es la circunferencia de radio 1 centrada en el origen."},
-{q:"¿Cuántas raíces complejas tiene, contando multiplicidad, un polinomio de grado 5?",o:["1","3","10","5"],c:3,e:"Teorema fundamental del álgebra: tantas como el grado."},
-{q:"¿Qué polinomio tiene como ceros la recta y = 2x + 1?",o:["y − 2x − 1","y + 2x + 1","2xy + 1","x² − y"],c:0,e:"y = 2x + 1 equivale a y − 2x − 1 = 0."},
-{q:"¿Qué es el plano A² sobre ℝ?",o:["Un anillo de polinomios","Una recta con un punto al infinito","El conjunto de pares (x, y) de reales","Un ideal"],c:2,e:"El espacio afín es simplemente el conjunto de n-tuplas."},
-{q:"El conjunto de ceros de x·y = 0 en el plano es:",o:["Un punto","Los dos ejes coordenados","Una circunferencia","Vacío"],c:1,e:"x·y = 0 si y solo si x = 0 o y = 0."}],
-2:[
-{q:"Con k algebraicamente cerrado, ¿qué es una variedad afín en kⁿ?",o:["Un anillo cociente de k[x₁,…,xₙ]","El conjunto de ceros comunes de una familia de polinomios","Un ideal radical","Una función racional continua"],c:1,e:"V(S) = {p ∈ kⁿ : f(p)=0 para todo f ∈ S}."},
-{q:"¿Qué dimensión tiene V(x² + y² − 1) ⊂ A²(ℂ)?",o:["0","1","2","3"],c:1,e:"Una ecuación no trivial en A² define una curva: dimensión 1."},
-{q:"¿Cuál es el anillo de coordenadas de la parábola V(y − x²)?",o:["k[x,y]","k[x]/(x²)","k[y]","k[x]"],c:3,e:"k[x,y]/(y−x²) ≅ k[x] mediante y ↦ x²."},
-{q:"¿Qué es un polinomio homogéneo?",o:["Todos sus monomios tienen el mismo grado","Solo tiene una variable","No tiene término constante","Tiene coeficientes enteros"],c:0,e:"Por ejemplo x² + xy + y² es homogéneo de grado 2."},
-{q:"En P² = (k³ ∖ {0})/~, ¿qué relación es ~?",o:["Igualdad de coordenadas","Misma primera coordenada","Proporcionalidad: v ~ λv con λ ≠ 0","Misma norma"],c:2,e:"Los puntos de P² son rectas por el origen de k³."},
-{q:"¿Cuál es I(V) para V = {(0,0)} ⊂ A²(k)?",o:["(xy)","(x, y)","(x + y)","(x² + y²)"],c:1,e:"Los polinomios que se anulan en el origen son los de término constante nulo: (x, y)."}],
-3:[
-{q:"Nullstellensatz fuerte: ¿cuánto vale I(V(J))?",o:["J","El primo mínimo sobre J","√J, el radical de J","J²"],c:2,e:"Sobre k algebraicamente cerrado, I(V(J)) = √J."},
-{q:"¿Cuál de estos ideales de k[x,y] es primo?",o:["(xy)","(x²)","(x² − y²)","(x² − y)"],c:3,e:"k[x,y]/(x²−y) ≅ k[x] es un dominio; los otros tienen divisores de cero."},
-{q:"Una variedad afín V es irreducible si y solo si:",o:["I(V) es primo","I(V) es maximal","V es finita","I(V) es principal"],c:0,e:"Irreducible ⇔ I(V) primo. Maximal ocurre solo para puntos."},
-{q:"¿Cuál es la dimensión de Krull de k[x,y,z]?",o:["1","2","4","3"],c:3,e:"Cadena maximal: 0 ⊂ (x) ⊂ (x,y) ⊂ (x,y,z)."},
-{q:"¿Qué ideales de k[x₁,…,xₙ] corresponden a puntos de Aⁿ?",o:["Los maximales (x₁−a₁,…,xₙ−aₙ)","Los primos de altura 1","Los principales","Los radicales"],c:0,e:"Nullstellensatz débil: los maximales son los de esa forma."},
-{q:"¿Cómo es la curva V(y² − x³) en el origen?",o:["Lisa","Una cúspide (singular)","Un nodo","No pasa por el origen"],c:1,e:"Las parciales (−3x², 2y) se anulan en (0,0): punto singular."},
-{q:"En la topología de Zariski de A¹(ℂ), los cerrados propios son:",o:["Los intervalos cerrados","Los conjuntos finitos","Los discretos","Los numerables"],c:1,e:"Un polinomio no nulo en una variable tiene finitas raíces."}],
-4:[
-{q:"Por Bézout, curvas planas proyectivas de grados 2 y 3 sin componentes comunes se cortan en (con multiplicidad):",o:["5 puntos","6 puntos","1 punto","Infinitos puntos"],c:1,e:"d·e = 2·3 = 6 sobre un cuerpo algebraicamente cerrado."},
-{q:"El espacio tangente de Zariski de V en p es:",o:["Hom(𝔪/𝔪², k), con 𝔪 el ideal maximal de O_{V,p}","El núcleo de una función f : V → k","La clausura de las rectas por p","O_{V,p} ⊗ k"],c:0,e:"T_pV = (𝔪_p/𝔪_p²)*."},
-{q:"Una variedad V de dimensión d es lisa en p si y solo si:",o:["dim T_pV = d + 1","O_{V,p} es un cuerpo","dim T_pV = d","V es irreducible"],c:2,e:"Criterio jacobiano: la dimensión tangente coincide con la dimensión de V."},
-{q:"El género de una curva plana lisa de grado d en P² es:",o:["d(d−1)/2","(d−1)(d−2)/2","d²","d − 1"],c:1,e:"Fórmula grado–género. Una cúbica lisa tiene género 1."},
-{q:"Explotar (blow-up) el plano en el origen reemplaza el punto por:",o:["Una recta proyectiva (divisor excepcional)","Un punto doble","Una circunferencia real","Una cúspide"],c:0,e:"El divisor excepcional es P¹, el espacio de direcciones por el origen."},
-{q:"El polinomio de Hilbert de Pⁿ es:",o:["C(t+n, n)","tⁿ","n·t + 1","(n+1)·t"],c:0,e:"Cuenta los monomios de grado t en n+1 variables: C(t+n, n)."}],
-5:[
-{q:"Que dit le théorème de Bézout pour deux courbes de P² de degrés d et e sans composante commune ?",o:["Elles se coupent en d + e points","Elles se coupent en d·e points, comptés avec multiplicité","Elles ne se coupent jamais","Elles se coupent en max(d, e) points"],c:1,e:"Le nombre d’intersections, avec multiplicité, vaut d·e."},
-{q:"Que dit le théorème de Riemann–Roch pour un diviseur D sur une courbe projective lisse de genre g ?",o:["ℓ(D) − ℓ(K − D) = deg D + 1 − g","ℓ(D) = deg D + g","ℓ(D) + ℓ(K − D) = g","ℓ(D) = deg D − g − 1"],c:0,e:"C’est la formule ℓ(D) − ℓ(K−D) = deg D + 1 − g."},
-{q:"Quel est le lieu singulier de la courbe V(xy) ?",o:["L’axe des x","L’axe des y","L’origine (0,0)","Il n’y en a pas"],c:2,e:"Les dérivées partielles (y, x) s’annulent seulement à l’origine."},
-{q:"Qu’est-ce qu’un morphisme fini de variétés affines ?",o:["Un morphisme à fibres vides","Un morphisme bijectif","Un morphisme à fibres infinies","Un morphisme dont l’anneau de coordonnées de la source est un module de type fini sur celui du but"],c:3,e:"Fini = A est un B-module de type fini via f*."},
-{q:"Quelle est la dimension de la grassmannienne G(2,4) des droites de P³ ?",o:["2","3","4","6"],c:2,e:"dim G(k,n) = k(n − k) = 2·2 = 4."},
-{q:"Pour une courbe elliptique E, l’application P ↦ [P − O] ∈ Pic⁰(E) est :",o:["Un isomorphisme de variétés E ≅ Pic⁰(E)","Constante","Un revêtement de degré 2","Non définie"],c:0,e:"C’est l’identification de E avec sa jacobienne."}],
-6:[
-{q:"¿Qué es Spec A para un anillo conmutativo A?",o:["El conjunto de ideales maximales","Los ideales primos, con la topología de Zariski y un haz de anillos","El grupo de unidades de A","Los homomorfismos A → ℂ"],c:1,e:"Spec A es un espacio anillado local cuyos puntos son los primos de A."},
-{q:"¿Cuál es el punto genérico de Spec ℤ?",o:["(2)","(p) para p grande","(0), cuya clausura es todo Spec ℤ","No existe"],c:2,e:"El ideal (0) es denso: su clausura es Spec ℤ completo."},
-{q:"Un esquema es:",o:["Un espacio anillado localmente isomorfo a Spec de anillos","Una variedad sobre ℂ","Un haz de grupos abelianos","Un anillo local"],c:0,e:"Se pega a partir de esquemas afines Spec A."},
-{q:"Por el lema de Yoneda, un esquema X queda determinado por su:",o:["Anillo de funciones globales","Funtor de puntos Hom(−, X)","Dimensión","Grupo fundamental"],c:1,e:"Es el punto de vista funtorial de Grothendieck."},
-{q:"La topología étale de un esquema es un ejemplo de:",o:["Una topología métrica","Una topología de Grothendieck sobre una categoría de recubrimientos","Un orden parcial","Una topología más gruesa que la de Zariski"],c:1,e:"No es una topología de espacio topológico; es más fina que la de Zariski."},
-{q:"¿Quién probó la hipótesis de Riemann de las conjeturas de Weil usando cohomología ℓ-ádica?",o:["Weil","Serre","Deligne","Faltings"],c:2,e:"Deligne (1974), con la cohomología étale desarrollada por Grothendieck."}]
-};
-
 const $=s=>document.querySelector(s),A=$("#app");
 const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
-const sh=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;const t=a[i];a[i]=a[j];a[j]=t}return a};
-const SYM=["▲","◆","●","■"];
-const lvs=()=>Object.keys(BANK).map(Number).sort((a,b)=>a-b);
-const QQ=o=>BANK[o[0]][o[1]],TT=o=>TL[o[0]]||30;
-// l=0 → progresivo: todos los niveles en orden, barajando dentro de cada uno
-const build=(l,n)=>l===0?lvs().reduce((a,k)=>a.concat(sh(BANK[k].map((_,i)=>[k,i]))),[]):sh(BANK[l].map((_,i)=>[l,i])).slice(0,n);
-let MODE="off",selL=1,selN=6,tick=null,t0=0,curT=20;
+const SYM=["▲","◆","●","■"],AR=id=>AREAS.filter(a=>a.id===id)[0];
+// Una "entrada" es [área, nivel, índice, semilla]; todos los jugadores la resuelven igual.
+const QQ=e=>{const x=BANK[e[0]][e[1]][e[2]],r=rng(e[3]);if(typeof x==="function")return x(r);const o=shr(r,x.o.map((t,k)=>[t,k]));return{q:x.q,e:x.e,o:o.map(a=>a[0]),c:o.map(a=>a[1]).indexOf(x.c)}};
+const TT=e=>AR(e[0]).T[e[1]]||30,LB=e=>AR(e[0]).n+" · "+AR(e[0]).L[e[1]];
+let MODE="off",selA="ga",selL=-1,selN=5,selR=3,tick=null,t0=0,curT=20;
 const pts=ms=>Math.round(1000*(1-.5*Math.min(ms,curT*1000)/(curT*1000)));
-const lvSel=()=>`<select id="lv"><option value="0"${selL==0?" selected":""}>Progresivo (niveles 1→${lvs().length})</option>${lvs().map(l=>`<option value="${l}"${l==selL?" selected":""}>${l}. ${LN[l]} (${BANK[l].length} preguntas, ${TL[l]} s)</option>`).join("")}</select> <label>Preguntas <input id="n" type="number" value="${selN}" min="3" max="50" style="width:4.5em"></label>`;
 const msg=t=>{const m=$("#msg");if(m)m.textContent=t};
+const lvOpts=()=>selA==="*"?`<option value="-1">Progresivo (fácil → difícil, en cada área)</option>`:`<option value="-1"${selL<0?" selected":""}>Progresivo (fácil → difícil)</option>`+AR(selA).L.map((l,i)=>`<option value="${i}"${selL===i?" selected":""}>${i+1}. ${l} (${AR(selA).T[i]} s)</option>`).join("");
+const cfg=()=>`<select id="ar">${AREAS.map(a=>`<option value="${a.id}"${a.id===selA?" selected":""}>${a.n}</option>`).join("")}<option value="*"${selA==="*"?" selected":""}>Mezcla de todas las áreas</option></select> <select id="lv">${lvOpts()}</select><div class="row"><label>Preguntas por ronda <input id="n" type="number" value="${selN}" min="3" max="20" style="width:4.5em"></label><select id="rr"><option value="3"${selR===3?" selected":""}>Partida completa (3 rondas)</option><option value="1"${selR===1?" selected":""}>Una sola ronda</option></select></div>`;
+// Arma las rondas sin repetir preguntas fijas dentro de la partida.
+function mkRounds(a,l,n,R){const used={},out=[];for(let r=0;r<R;r++){const rd=[];for(let j=0;j<n;j++){
+  const aa=a==="*"?AREAS[Math.random()*AREAS.length|0].id:a,nl=AR(aa).L.length,ll=(l<0||a==="*")?Math.min(nl-1,Math.floor(j/n*nl)):l;
+  const pool=BANK[aa][ll],free=[];pool.forEach((x,i)=>{if(typeof x==="function"||!used[aa+ll+i])free.push(i)});
+  const i=free.length?free[Math.random()*free.length|0]:Math.random()*pool.length|0;used[aa+ll+i]=1;rd.push([aa,ll,i,Math.random()*1e9|0])}out.push(rd)}return out}
 
-function qHTML(o,i,n,s){const q=QQ(o);return `<div class="top"><span>Pregunta ${i+1}/${n} · ${esc(LN[o[0]])}</span><span id="sec"></span></div><div class="bar"><i id="bar"></i></div><h2>${esc(q.q)}</h2><div class="opts">${q.o.map((t,k)=>`<button class="opt${s.rev&&k!==q.c?" dim":""}${s.sel===k?" sel":""}${s.rev&&k===q.c?" ok":""}" data-c="${k}"${s.dis?" disabled":""}><b>${SYM[k]}</b> ${esc(t)}</button>`).join("")}</div>`}
+function qHTML(e,hd,s){const q=QQ(e);return `<div class="top"><span>${esc(hd)}</span><span id="sec"></span></div><div class="mut">${esc(LB(e))}</div><div class="bar"><i id="bar"></i></div><h2>${esc(q.q)}</h2><div class="opts">${q.o.map((t,k)=>`<button class="opt${s.rev&&k!==q.c?" dim":""}${s.sel===k?" sel":""}${s.rev&&k===q.c?" ok":""}" data-c="${k}"${s.dis?" disabled":""}><b>${SYM[k]}</b> ${esc(t)}</button>`).join("")}</div>`}
 function startClock(T,onEnd){clearInterval(tick);curT=T;t0=Date.now();tick=setInterval(()=>{const e=(Date.now()-t0)/1000,b=$("#bar"),s=$("#sec");if(b)b.style.width=Math.max(0,100-e/T*100)+"%";if(s)s.textContent=Math.max(0,Math.ceil(T-e))+" s";if(e>=T){clearInterval(tick);if(onEnd)onEnd()}},100)}
 
-// ===== INICIO =====
 function home(){
-  clearInterval(tick);clearTimeout(hostT);
-  if(peer){try{peer.destroy()}catch(e){}peer=null}
-  conns={};conn=null;G=null;
-  A.innerHTML=`<h1>Geometría algebraica</h1><p class="mut">Cuestionarios cronometrados para aprender y competir.</p>
-<div class="card"><h3>Práctica offline</h3><p class="mut">Tú solo: puntos por rapidez y bonus por racha. Funciona sin internet.</p>${lvSel()}<div><button class="btn" data-act="off">Empezar</button></div></div>
-<div class="card"><h3>Sala en vivo</h3><p class="mut">Todos responden a la vez y compiten en un ranking. Uno crea la sala; los demás entran con el código.</p>
-<input id="nm" placeholder="Tu nombre" maxlength="16" autocomplete="off"><div class="row"><button class="btn" data-act="host">Crear sala</button><input id="cd" placeholder="Código" maxlength="4" autocomplete="off" autocapitalize="characters" style="width:6em;text-transform:uppercase"><button data-act="join">Unirme</button></div><div id="msg"></div></div>`;
-}
+  clearInterval(tick);clearTimeout(hostT);if(peer){try{peer.destroy()}catch(e){}peer=null}
+  conns={};conn=null;G=null;MODE="off";
+  A.innerHTML=`<h1>Duelo de matemáticas</h1><p class="mut">Cuestionarios cronometrados para aprender y competir.</p>
+<div class="card"><h3>Qué quieren jugar</h3>${cfg()}</div>
+<div class="card"><h3>Práctica offline</h3><p class="mut">Tú solo, sin internet. Cada ronda termina con un podio.</p><button class="btn" data-act="off">Empezar</button></div>
+<div class="card"><h3>Sala en vivo</h3><p class="mut">Todos responden a la vez; nadie avanza hasta que todos contestan (o se acaba el tiempo).</p>
+<input id="nm" placeholder="Tu nombre" maxlength="16" autocomplete="off"><div class="row"><button class="btn" data-act="host">Crear sala</button><input id="cd" placeholder="Código" maxlength="4" autocomplete="off" autocapitalize="characters" style="width:6em;text-transform:uppercase"><button data-act="join">Unirme</button></div><div id="msg"></div></div>`}
 
-// ===== OFFLINE =====
-let O=null;
-function offStart(){MODE="off";const l=+$("#lv").value,n=Math.max(1,Math.min(+$("#n").value||6,50));O={list:build(l,n),i:0,s:0,st:0,ok:0,l};if(l)O.list=O.list.slice(0,n);offQ()}
-function offQ(){const o=O.list[O.i];O.rev=false;A.innerHTML=qHTML(o,O.i,O.list.length,{})+`<p class="mut">Puntos: <b>${O.s}</b> · Racha: <b>${O.st}</b></p>`;startClock(TT(o),()=>offAns(-1))}
-function offAns(c){if(O.rev)return;O.rev=true;clearInterval(tick);const o=O.list[O.i],q=QQ(o),ms=Date.now()-t0,good=c===q.c;let p=0;
-  if(good){O.st++;O.ok++;p=pts(ms)+Math.min(O.st-1,5)*50;O.s+=p}else O.st=0;
-  A.innerHTML=qHTML(o,O.i,O.list.length,{rev:1,sel:c,dis:1})+`<div class="card ${good?"good":"bad"}"><b>${good?"¡Correcto! +"+p:c<0?"Se acabó el tiempo":"Incorrecto"}</b><p>${esc(q.e)}</p></div><button class="btn" data-act="nx">${O.i+1<O.list.length?"Siguiente":"Ver resultado"}</button>`}
-function offEnd(){let best=O.s;try{const k="ag-best-"+O.l;best=+localStorage.getItem(k)||0;if(O.s>best){localStorage.setItem(k,O.s);best=O.s}}catch(e){best=Math.max(best,O.s)}
-  A.innerHTML=`<div class="card"><h2>Resultado</h2><p>Puntos: <b>${O.s}</b> · Aciertos: <b>${O.ok}/${O.list.length}</b></p><p class="mut">Mejor marca en esta modalidad: ${best}</p><button class="btn" data-act="home">Volver</button></div>`}
-
-// ===== EN VIVO (PeerJS: el anfitrión es el servidor de la partida) =====
-let peer=null,conns={},conn=null,PL={},S={names:[],na:0},me="",isHost=false,G=null,code="",myA=null,key="",scores={},hostT=null,tries=0;
+// ===== MOTOR (el modo offline es una partida local con un solo jugador) =====
+let peer=null,conns={},conn=null,PL={},S_={names:[],na:0,pend:[]},me="",isHost=false,G=null,code="",myA=null,key="",scores={},hostT=null,tries=0;
 const mid=()=>isHost?"host":(peer&&peer.id);
-const vA=a=>!!(a&&G&&G.ph==="q"&&a.g===G.gid&&a.i===G.i);
-const gQ=()=>G.order[G.i];
-function bc(){const v=Object.keys(PL).map(k=>PL[k]);S={t:"s",g:G,names:v.map(p=>p.n),na:v.filter(p=>vA(p.a)).length};Object.keys(conns).forEach(k=>{try{if(conns[k].open)conns[k].send(S)}catch(e){}})}
+const vA=a=>!!(a&&G&&G.ph==="q"&&a.g===G.gid&&a.i===G.i&&a.r===G.r);
+const gQ=()=>G.rounds[G.r][G.i];
+function bc(){const v=Object.keys(PL).map(k=>PL[k]);S_={t:"s",g:G,names:v.map(p=>p.n),na:v.filter(p=>vA(p.a)).length,pend:v.filter(p=>!vA(p.a)).map(p=>p.n)};Object.keys(conns).forEach(k=>{try{if(conns[k].open)conns[k].send(S_)}catch(e){}})}
 function setG(g){G=g;bc();sync()}
-function sync(){
-  if(G&&G.ph==="q"){const k=G.gid+":"+G.i;if(k!==key){key=k;myA=null;startClock(TT(gQ()),()=>{if(isHost)hostReveal();else liveView()})}}
-  liveView()}
+function sync(){if(G&&G.ph==="q"){const k=G.gid+":"+G.r+":"+G.i;if(k!==key){key=k;myA=null;startClock(TT(gQ()),()=>{if(isHost)hostReveal();else liveView()})}}liveView()}
+function startOff(){MODE="off";isHost=true;PL={host:{n:"Tú"}};conns={};peer=null;hostStart()}
 function enter(host){
   const nm=$("#nm").value.trim().slice(0,16);if(!nm)return msg("Escribe tu nombre.");
   if(!window.Peer)return msg("El modo en vivo necesita internet (no se pudo cargar PeerJS).");
   isHost=host;me=nm;G=null;myA=null;key="";scores={};PL={};conns={};tries=0;MODE="live";
   if(host)openHost();else{code=$("#cd").value.trim().toUpperCase();if(code.length!==4)return msg("El código tiene 4 letras.");openGuest()}}
 function openHost(){
-  code=Array.from({length:4},()=>"ABCDEFGHJKMNPQRSTUVWXYZ"[Math.random()*23|0]).join("");
-  msg("Creando sala…");peer=new Peer("agq-"+code);
+  code=Array.from({length:4},()=>"ABCDEFGHJKMNPQRSTUVWXYZ"[Math.random()*23|0]).join("");msg("Creando sala…");peer=new Peer("agq-"+code);
   peer.on("open",()=>{PL.host={n:me};G={ph:"lobby"};bc();liveView()});
   peer.on("error",e=>{if(e.type==="unavailable-id"&&tries++<5){try{peer.destroy()}catch(x){}openHost()}else msg("Error de red: "+e.type)});
   peer.on("connection",c=>{conns[c.peer]=c;
     c.on("data",m=>{if(!m)return;if(m.t==="join")PL[c.peer]={n:String(m.n).slice(0,16)};else if(m.t==="ans"&&PL[c.peer])PL[c.peer].a=m.a;bc();checkAll();liveView()});
     c.on("close",()=>{delete conns[c.peer];delete PL[c.peer];bc();checkAll();liveView()})})}
 function openGuest(){
-  msg("Conectando…");peer=new Peer();
-  const fail=setTimeout(()=>msg("No se pudo conectar. Revisa el código."),12000);
+  msg("Conectando…");peer=new Peer();const fail=setTimeout(()=>msg("No se pudo conectar. Revisa el código."),12000);
   peer.on("error",e=>{clearTimeout(fail);msg(e.type==="peer-unavailable"?"Sala no encontrada.":"Error de red: "+e.type)});
   peer.on("open",()=>{conn=peer.connect("agq-"+code,{reliable:true});
     conn.on("open",()=>{clearTimeout(fail);conn.send({t:"join",n:me})});
-    conn.on("data",m=>{if(m&&m.t==="s"){S=m;G=m.g;sync()}});
+    conn.on("data",m=>{if(m&&m.t==="s"){S_=m;G=m.g;sync()}});
     conn.on("close",()=>{clearInterval(tick);A.innerHTML=`<div class="card"><b>Se perdió la conexión con el anfitrión.</b></div><button class="btn" data-act="home">Inicio</button>`})})}
 function hostTimer(){clearTimeout(hostT);hostT=setTimeout(hostReveal,TT(gQ())*1000+1500)}
+// Se revela cuando TODOS respondieron (o se acaba el tiempo).
 function checkAll(){if(!isHost||!G||G.ph!=="q")return;const v=Object.keys(PL).map(k=>PL[k]);if(v.length&&v.every(p=>vA(p.a)))hostReveal()}
-function hostStart(){const l=+$("#lv").value,n=Math.max(1,Math.min(+$("#n").value||6,50));let order=build(l,n);if(l)order=order.slice(0,n);
-  scores={};Object.keys(PL).forEach(k=>{PL[k].a=null});
-  setG({ph:"q",gid:Math.random().toString(36).slice(2,7),order:order,i:0,sc:{}});hostTimer()}
+function hostStart(){const n=Math.max(1,Math.min(+$("#n").value||5,20));scores={};Object.keys(PL).forEach(k=>{PL[k].a=null});
+  setG({ph:"q",gid:Math.random().toString(36).slice(2,7),rounds:mkRounds(selA,selL,n,selR),r:0,i:0,sc:{}});hostTimer()}
 function hostReveal(){if(!G||G.ph!=="q")return;clearTimeout(hostT);clearInterval(tick);const q=QQ(gQ());
-  Object.keys(PL).forEach(k=>{const a=PL[k].a,add=vA(a)&&a.c===q.c?pts(a.ms):0,pv=scores[k];scores[k]={n:PL[k].n,p:(pv?pv.p:0)+add}});
+  Object.keys(PL).forEach(k=>{const a=PL[k].a,pv=scores[k]||{p:0,rp:0,st:0},good=vA(a)&&a.c===q.c,st=good?pv.st+1:0,add=good?pts(a.ms)+Math.min(st-1,5)*50:0;
+    scores[k]={n:PL[k].n,p:pv.p+add,rp:pv.rp+add,st:st}});
   setG(Object.assign({},G,{ph:"rev",sc:scores}))}
-function hostNext(){if(G.i+1<G.order.length){setG(Object.assign({},G,{ph:"q",i:G.i+1}));hostTimer()}else setG(Object.assign({},G,{ph:"end"}))}
-function livePick(c){if(!G||G.ph!=="q"||myA||(Date.now()-t0)/1000>=curT)return;myA={i:G.i,g:G.gid,c:c,ms:Date.now()-t0};
+function hostNext(){if(G.ph==="rev"){if(G.i+1<G.rounds[G.r].length){setG(Object.assign({},G,{ph:"q",i:G.i+1}));hostTimer()}else setG(Object.assign({},G,{ph:"pod"}));return}
+  if(G.r+1<G.rounds.length){Object.keys(scores).forEach(k=>{scores[k].rp=0});setG(Object.assign({},G,{ph:"q",r:G.r+1,i:0,sc:scores}));hostTimer();return}
+  let best=0;if(MODE==="off")try{const k="ag2-"+selA+selL+"-"+selN+"-"+selR,t=scores.host?scores.host.p:0;best=+localStorage.getItem(k)||0;if(t>best){localStorage.setItem(k,t);best=t}}catch(e){}
+  setG(Object.assign({},G,{ph:"end",best:best}))}
+function livePick(c){if(!G||G.ph!=="q"||myA||(Date.now()-t0)/1000>=curT)return;myA={i:G.i,g:G.gid,r:G.r,c:c,ms:Date.now()-t0};
   if(isHost){PL.host.a=myA;bc();checkAll()}else if(conn)conn.send({t:"ans",a:myA});liveView()}
-function board(sc){const rows=Object.keys(sc||{}).map(k=>[k,sc[k]]).sort((a,b)=>b[1].p-a[1].p);
-  return `<div class="card"><h3>Ranking</h3><ol class="bd">${rows.map(r=>`<li class="${r[0]===mid()?"me":""}">${esc(r[1].n)} — <b>${r[1].p}</b></li>`).join("")}</ol></div>`}
+const rows=(sc,k)=>Object.keys(sc||{}).map(i=>[i,sc[i]]).sort((a,b)=>b[1][k]-a[1][k]);
+const board=(sc,k)=>`<ol class="bd">${rows(sc,k).map(r=>`<li class="${r[0]===mid()?"me":""}">${esc(r[1].n)} — <b>${r[1][k]}</b></li>`).join("")}</ol>`;
+function podium(sc,k){const t=rows(sc,k),H=[110,80,55],M=["🥇","🥈","🥉"];
+  return `<div class="pod">${[1,0,2].filter(i=>t[i]).map(i=>`<div class="pc"><div class="m">${M[i]}</div><div class="nm">${esc(t[i][1].n)}</div><b>${t[i][1][k]}</b><div class="st" style="height:${H[i]}px"></div></div>`).join("")}</div>`+(t.length>3?board(Object.fromEntries?Object.fromEntries(t.slice(3)):{},k):"")}
+const nextBtn=t=>isHost?`<button class="btn" data-act="next">${t}</button>`:`<p class="mut">Esperando al anfitrión…</p>`;
 function liveView(){
-  if(MODE!=="live"||!peer)return;
-  if(!G||G.ph==="lobby"){
-    A.innerHTML=`<div class="card"><div class="mut">Código de sala</div><div class="code">${esc(code)}</div><p class="mut">Pásale a tu amigo el enlace de esta página y este código.</p><h3>Jugadores (${S.names.length})</h3><p>${S.names.map(esc).join(" · ")||"…"}</p>${isHost?lvSel()+`<div><button class="btn" data-act="start">Empezar</button></div>`:`<p class="mut">Esperando al anfitrión…</p>`}</div>`;return}
-  if(G.ph==="end"){A.innerHTML=`<h2>¡Fin de la partida!</h2>`+board(G.sc)+`<button class="btn" data-act="home">Salir</button>`;return}
-  const o=gQ(),q=QQ(o),n=G.order.length;
+  if(!G&&!peer)return;
+  if(!G||G.ph==="lobby"){A.innerHTML=`<div class="card"><div class="mut">Código de sala</div><div class="code">${esc(code)}</div><p class="mut">Pásale a tu amigo el enlace de esta página y este código.</p><h3>Jugadores (${S_.names.length})</h3><p>${S_.names.map(esc).join(" · ")||"…"}</p>${isHost?cfg()+`<div><button class="btn" data-act="start">Empezar</button></div>`:`<p class="mut">Esperando al anfitrión…</p>`}</div>`;return}
+  const R=G.rounds.length;
+  if(G.ph==="end"){A.innerHTML=`<h2>🏆 Resultado final</h2>`+podium(G.sc,"p")+(G.best?`<p class="mut">Tu mejor marca con esta configuración: ${G.best}</p>`:"")+`<button class="btn" data-act="home">Salir</button>`;return}
+  if(G.ph==="pod"){A.innerHTML=`<h2>Podio de la ronda ${G.r+1}/${R}</h2>`+podium(G.sc,"rp")+(R>1?`<div class="card"><h3>Acumulado</h3>${board(G.sc,"p")}</div>`:"")+nextBtn(G.r+1<R?"Siguiente ronda":"Ver resultado final");return}
+  const e=gQ(),q=QQ(e),n=G.rounds[G.r].length,hd=(R>1?"Ronda "+(G.r+1)+"/"+R+" · ":"")+"Pregunta "+(G.i+1)+"/"+n;
   if(G.ph==="q"){const up=(Date.now()-t0)/1000>=curT;
-    A.innerHTML=qHTML(o,G.i,n,{sel:myA?myA.c:null,dis:!!myA||up})+`<p class="mut">${myA?"Respuesta enviada. ":up?"Tiempo agotado. ":""}Han respondido ${S.na}/${S.names.length}</p>`;return}
-  const a=myA&&myA.g===G.gid&&myA.i===G.i?myA:null,good=a&&a.c===q.c;
-  A.innerHTML=qHTML(o,G.i,n,{rev:1,sel:a?a.c:-1,dis:1})+`<div class="card ${good?"good":"bad"}"><b>${good?"¡Correcto!":a?"Incorrecto":"Sin respuesta"}</b><p>${esc(q.e)}</p></div>`+board(G.sc)+(isHost?`<button class="btn" data-act="next">${G.i+1<n?"Siguiente":"Ver resultado final"}</button>`:`<p class="mut">Esperando al anfitrión…</p>`);
+    A.innerHTML=qHTML(e,hd,{sel:myA?myA.c:null,dis:!!myA||up})+`<p class="mut">${myA?"Respuesta enviada. ":up?"Tiempo agotado. ":""}${S_.pend.length?"Esperando a: "+S_.pend.map(esc).join(", "):"Todos respondieron"} (${S_.na}/${S_.names.length})</p>`;return}
+  const a=myA&&myA.g===G.gid&&myA.i===G.i&&myA.r===G.r?myA:null,good=a&&a.c===q.c;
+  A.innerHTML=qHTML(e,hd,{rev:1,sel:a?a.c:-1,dis:1})+`<div class="card ${good?"good":"bad"}"><b>${good?"¡Correcto!":a?"Incorrecto":"Sin respuesta"}</b><p>${esc(q.e)}</p></div>`+(S_.names.length>1?`<div class="card"><h3>Ranking</h3>${board(G.sc,"p")}</div>`:`<p class="mut">Puntos: <b>${G.sc.host?G.sc.host.p:0}</b></p>`)+nextBtn(G.i+1<n?"Siguiente":"Ver podio de la ronda");
 }
-
-// ===== EVENTOS =====
-const ACT={off:offStart,nx:()=>{O.i++;O.i<O.list.length?offQ():offEnd()},host:()=>enter(true),join:()=>enter(false),start:hostStart,next:hostNext,home:home};
+const ACT={off:startOff,host:()=>enter(true),join:()=>enter(false),start:hostStart,next:hostNext,home:home};
 document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b||b.disabled)return;
-  if(b.dataset.c!==undefined){const c=+b.dataset.c;if(MODE==="off")offAns(c);else livePick(c);return}
+  if(b.dataset.c!==undefined){const c=+b.dataset.c;if(MODE==="off")livePick(c);else livePick(c);return}
   const f=ACT[b.dataset.act];if(f)f()});
-document.addEventListener("change",e=>{if(e.target.id==="lv")selL=+e.target.value;if(e.target.id==="n")selN=e.target.value});
+document.addEventListener("change",e=>{const i=e.target.id,v=e.target.value;
+  if(i==="ar"){selA=v;selL=-1;$("#lv").innerHTML=lvOpts()}else if(i==="lv")selL=+v;else if(i==="n")selN=Math.max(3,Math.min(+v||5,20));else if(i==="rr")selR=+v});
 home();
 </script></body></html>

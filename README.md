@@ -1,37 +1,30 @@
-# Geometría algebraica · Duelo de cuestionarios
+# Duelo de matemáticas
 
-Cuestionarios cronometrados estilo Kahoot para aprender geometría algebraica.
-Una sola página (`index.html`), sin build ni dependencias que instalar.
+Cuestionarios cronometrados estilo Kahoot para aprender matemáticas, solo o compitiendo en vivo.
+Sin build: `index.html` (motor) + `preguntas.js` (banco de preguntas).
 
-- **Práctica offline:** juegas solo, sin internet.
-- **Sala en vivo:** uno crea la sala y comparte el código de 4 letras; los demás entran desde el mismo enlace.
-- **Niveles:** Súper fácil → Fácil → Normal → Difícil → Français (difficile) → Grothendieck, más un modo Progresivo que los recorre en orden.
+- **Áreas y niveles (23):** Geometría algebraica (6, hasta *Grothendieck*), Teoría de grafos (3), Análisis real (3),
+  Topología (3 + 2 de topología algebraica), Álgebra abstracta (6, hasta *Évariste Galois*), y una mezcla de todas.
+- **Partida completa:** 3 rondas (o una sola), con podio al final de cada ronda y podio final.
+- **Modo en vivo:** nadie avanza hasta que todos responden (o se acaba el tiempo); se muestra quién falta.
+- **Modo progresivo:** cada ronda sube de dificultad de la primera a la última pregunta.
 
 ## Publicar en GitHub Pages
 
-```bash
-cd geometria-algebraica-quiz
-git init && git add . && git commit -m "Quiz de geometría algebraica"
-git branch -M main
-git remote add origin https://github.com/TU_USUARIO/geometria-algebraica-quiz.git
-git push -u origin main
+Sube `index.html`, `preguntas.js` y este README a un repo, y activa **Settings → Pages → Deploy from a branch → `main` / root**.
+
+## Agregar preguntas
+
+En `preguntas.js`, dentro del arreglo del nivel (`gr0`, `aa5`, …):
+
+```js
+S("Enunciado", ["Correcta", "Mala 1", "Mala 2", "Mala 3"], "Explicación")
 ```
 
-Luego, en el repo: **Settings → Pages → Build and deployment → Deploy from a branch → `main` / `(root)`**.
-La página queda en `https://TU_USUARIO.github.io/geometria-algebraica-quiz/`.
-
-## Agregar preguntas o niveles
-
-Todo está al inicio del `<script>` de `index.html`:
-
-- `LN`: nombre de cada nivel. `TL`: segundos por pregunta.
-- `BANK[n]`: lista de preguntas `{q, o:[4 opciones], c:índice correcto, e:explicación}`.
-
-Para un nivel nuevo, agrega la misma clave en `LN`, `TL` y `BANK`; el selector lo detecta solo.
+La correcta va **primero**; el motor baraja las opciones. Para variantes numéricas usa un generador
+(`r => mc(r, "enunciado", respuesta, [distractores], "explicación")`, ver ejemplos). Áreas, niveles y tiempos están en `AREAS`.
 
 ## Notas del modo en vivo
 
-Usa [PeerJS](https://peerjs.com) (WebRTC) con su servidor público gratuito solo para conectar a los jugadores;
-las respuestas viajan directamente entre navegadores y el anfitrión lleva el ranking.
-Si el anfitrión recarga o cierra la página, la partida se pierde. En algunas redes móviles muy restrictivas
-(NAT simétrico) la conexión puede fallar; en ese caso prueben con Wi-Fi.
+Usa [PeerJS](https://peerjs.com) (WebRTC). El anfitrión lleva el ranking: si recarga, se pierde la partida.
+En algunas redes móviles muy restrictivas la conexión puede fallar; en ese caso, prueben con Wi-Fi.
