@@ -7,7 +7,7 @@
 :root,[data-theme="light"]{--bg:#fff8f1;--fg:#2b1d12;--card:#fff;--mut:#7a6556;--ac:#e8590c;--on:#fff;--bd:#f3d9c4;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 [data-theme="dark"]{--bg:#1a120c;--fg:#f6ebe0;--card:#261a12;--mut:#b79f8b;--ac:#ff922b;--on:#1a120c;--bd:#4a3322;color-scheme:dark}
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1a120c;--fg:#f6ebe0;--card:#261a12;--mut:#b79f8b;--ac:#ff922b;--on:#1a120c;--bd:#4a3322;color-scheme:dark}}
-*{-webkit-tap-highlight-color:transparent}
+*{-webkit-tap-highlight-color:transparent;box-sizing:border-box}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
 .w{max-width:720px;margin:0 auto;padding:14px}
@@ -24,27 +24,32 @@ button{cursor:pointer}button:disabled{cursor:default}
 .bar i{display:block;height:100%;width:100%;background:var(--ac)}
 .opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 @media(max-width:520px){.opts{grid-template-columns:1fr}}
-.opt{background:var(--card);border:2px solid var(--ac);text-align:left;padding:14px;font-weight:600}
+.opt{background:var(--card);border:2px solid var(--ac);text-align:left;padding:14px;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:8px}
 .opt b{color:var(--ac)}
-.dim{opacity:.4}.opt.ok{background:var(--ac);color:var(--on)}.opt.ok b{color:var(--on)}.sel{outline:3px solid var(--fg)}
+.kbd{font-size:.75rem;color:var(--mut);border:1px solid var(--bd);border-radius:4px;padding:1px 5px;font-weight:400}
+.dim{opacity:.4}.opt.ok{background:var(--ac);color:var(--on)}.opt.ok b,.opt.ok .kbd{color:var(--on);border-color:var(--on)}.sel{outline:3px solid var(--fg)}
 @media(hover:hover){.opt:not(:disabled):hover{background:var(--bd)}}
 .code{font-size:2.6rem;letter-spacing:.3em;font-weight:800;color:var(--ac)}
 ol.bd{padding-left:1.4em}ol.bd li{margin:.2em 0}ol.bd li.me{font-weight:700;color:var(--ac)}
 #msg,#amsg{color:#e03131;min-height:1.4em;font-size:.9rem}
-.pod{display:flex;justify-content:center;align-items:flex-end;gap:10px;margin:14px 0}.pc{text-align:center;flex:1;max-width:150px;min-width:0}.pc .m{font-size:2rem}.pc .nm{font-weight:700;overflow-wrap:anywhere}.pc .st{background:var(--ac);border-radius:8px 8px 0 0;margin-top:4px}
-.badge{display:inline-block;padding:4px 8px;border-radius:6px;background:var(--bd);font-size:.85rem;font-weight:600}
+.pod{display:flex;justify-content:center;align-items:flex-end;gap:12px;margin:18px 0 14px;min-height:190px;padding:0 10px}
+.pc{text-align:center;flex:1;max-width:160px;min-width:0;display:flex;flex-direction:column;align-items:center}
+.pc .m{font-size:2rem;line-height:1.1}
+.pc .nm{font-weight:700;overflow-wrap:anywhere;font-size:.95rem;margin:4px 0 2px}
+.pc .pts{font-size:.9rem;color:var(--mut);font-weight:700;margin-bottom:6px}
+.pc .st{width:100%;background:var(--ac);color:var(--on);border-radius:10px 10px 0 0;display:flex;align-items:flex-start;justify-content:center;padding-top:8px;font-weight:800;font-size:1.1rem;box-shadow:0 2px 6px rgba(0,0,0,.12);transition:height .3s ease}
+.pc.r2 .st{opacity:.85}.pc.r3 .st{opacity:.7}
+.badge{display:inline-block;padding:5px 10px;border-radius:6px;background:var(--bd);font-size:.85rem;font-weight:600}
+.tbtn{padding:6px 10px;font-size:1.1rem;line-height:1;border-radius:8px}
 table.rk{width:100%;border-collapse:collapse;font-size:.92rem;margin-top:8px}
 table.rk th,table.rk td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--bd)}
 table.rk th{color:var(--mut);font-weight:600}
+details summary{cursor:pointer;font-weight:700;margin:6px 0}
 </style></head><body><div class="w">
 <div class="top">
   <button data-act="home">← Inicio</button>
   <div class="row" style="margin-top:0">
-    <select id="thm" title="Tema visual" style="padding:5px 8px;font-size:.85rem">
-      <option value="auto">Tema: Sistema</option>
-      <option value="light">Tema: Claro</option>
-      <option value="dark">Tema: Oscuro</option>
-    </select>
+    <button id="thmBtn" class="tbtn" data-act="theme" title="Cambiar tema claro/oscuro">☀️</button>
     <span id="ubadge"></span>
   </div>
 </div>
@@ -57,20 +62,54 @@ const GOOGLE_CLIENT_ID="994362878650-s19b3fu9rvjo6ia666ld2fj0cbjle9nh.apps.googl
 
 const $=s=>document.querySelector(s),A=$("#app");
 const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
-const SYM=["▲","◆","●","■"],AR=id=>AREAS.filter(a=>a.id===id)[0];
+const SYM=["▲","◆","●","■"],KEYS=["1","2","3","4"],AR=id=>AREAS.filter(a=>a.id===id)[0];
 
-// ===== TEMA CLARO / OSCURO =====
-function applyTheme(t){
-  if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t);
-  else document.documentElement.removeAttribute("data-theme");
-  try{localStorage.setItem("dp_theme",t)}catch(e){}
-  const sel=$("#thm");if(sel)sel.value=t;
+// ===== DECODIFICACIÓN UTF-8 Y REPARACIÓN DE NOMBRES =====
+function fixUtf8(s){
+  if(!s||typeof s!=="string"||!/Ã/.test(s))return s;
+  try{return new TextDecoder("utf-8",{fatal:true}).decode(Uint8Array.from(s,c=>c.charCodeAt(0)))}catch(e){return s}
 }
-applyTheme((()=>{try{return localStorage.getItem("dp_theme")||"auto"}catch(e){return "auto"}})());
+function decodeJWT(token){
+  const b64=token.split(".")[1].replace(/-/g,"+").replace(/_/g,"/");
+  const bin=atob(b64);
+  const bytes=Uint8Array.from(bin,c=>c.charCodeAt(0));
+  return JSON.parse(new TextDecoder("utf-8").decode(bytes));
+}
+
+// ===== TEMA CLARO / OSCURO (AUTOMÁTICO CON EL SISTEMA AL INICIO) =====
+const sysDark=window.matchMedia?window.matchMedia("(prefers-color-scheme: dark)"):null;
+function isDarkActive(){
+  const attr=document.documentElement.getAttribute("data-theme");
+  if(attr==="dark")return true;
+  if(attr==="light")return false;
+  return !!(sysDark&&sysDark.matches);
+}
+function updateThemeIcon(){
+  const b=$("#thmBtn");if(!b)return;
+  const dark=isDarkActive();
+  b.textContent=dark?"🌙":"☀️";
+  b.title=dark?"Modo oscuro activo (pulsar para modo claro)":"Modo claro activo (pulsar para modo oscuro)";
+}
+function applyTheme(t){
+  if(t==="light"||t==="dark"){
+    document.documentElement.setAttribute("data-theme",t);
+    try{localStorage.setItem("dp_theme",t)}catch(e){}
+  }else{
+    document.documentElement.removeAttribute("data-theme");
+    try{localStorage.removeItem("dp_theme")}catch(e){}
+  }
+  updateThemeIcon();
+}
+function toggleTheme(){applyTheme(isDarkActive()?"light":"dark")}
+applyTheme((()=>{try{const v=localStorage.getItem("dp_theme");return(v==="light"||v==="dark")?v:"auto"}catch(e){return "auto"}})());
+if(sysDark&&sysDark.addEventListener)sysDark.addEventListener("change",()=>updateThemeIcon());
 
 // ===== AUTENTICACIÓN =====
 let USER=null;
-try{USER=JSON.parse(localStorage.getItem("dp_session"))}catch(e){}
+try{
+  USER=JSON.parse(localStorage.getItem("dp_session"));
+  if(USER&&USER.n){USER.n=fixUtf8(USER.n);localStorage.setItem("dp_session",JSON.stringify(USER))}
+}catch(e){}
 function saveSession(u){USER=u;try{if(u)localStorage.setItem("dp_session",JSON.stringify(u));else localStorage.removeItem("dp_session")}catch(e){}renderBadge()}
 function renderBadge(){const b=$("#ubadge");if(!b)return;b.innerHTML=USER?`<span class="badge">👤 ${esc(USER.n)} (${USER.t})</span> <button data-act="logout" style="padding:5px 8px;font-size:.85rem">Cerrar sesión</button>`:""}
 
@@ -80,7 +119,7 @@ async function sha256(str){
 }
 function validPwd(p){return p.length>=8&&/[A-Z]/.test(p)&&/[a-z]/.test(p)&&/[0-9]/.test(p)}
 async function authReg(){
-  const u=($("#au").value||"").trim(),p=$("#ap").value||"",m=$("#amsg");
+  const u=($("#au").value||"").trim().slice(0,32),p=$("#ap").value||"",m=$("#amsg");
   if(u.length<3)return m.textContent="El usuario debe tener al menos 3 caracteres.";
   if(!validPwd(p))return m.textContent="La contraseña requiere mínimo 8 caracteres, mayúscula, minúscula y número.";
   let db={};try{db=JSON.parse(localStorage.getItem("dp_users")||"{}")}catch(e){}
@@ -94,7 +133,7 @@ async function authLogin(){
   let db={};try{db=JSON.parse(localStorage.getItem("dp_users")||"{}")}catch(e){}
   const r=db[u.toLowerCase()];if(!r)return m.textContent="Usuario no encontrado.";
   const h=await sha256(r.s+":"+p);if(h!==r.h)return m.textContent="Contraseña incorrecta.";
-  saveSession({n:r.n,t:"Cuenta"});home();
+  saveSession({n:fixUtf8(r.n),t:"Cuenta"});home();
 }
 function initGoogle(){
   const gBox=$("#gbtn");if(!gBox||!GOOGLE_CLIENT_ID)return;
@@ -103,8 +142,9 @@ function initGoogle(){
       client_id:GOOGLE_CLIENT_ID,
       callback:res=>{
         try{
-          const payload=JSON.parse(atob(res.credential.split(".")[1].replace(/-/g,"+").replace(/_/g,"/")));
-          saveSession({n:(payload.name||payload.email||"Usuario").slice(0,16),t:"Google"});home();
+          const payload=decodeJWT(res.credential);
+          const fullName=(payload.name||payload.given_name||payload.email||"Usuario").trim().slice(0,32);
+          saveSession({n:fullName,t:"Google"});home();
         }catch(e){}
       }
     });
@@ -119,11 +159,48 @@ function recKey(){return "ag2-"+selA+selL+"-"+selN+"-"+selR}
 function getRec(k){
   try{
     const raw=localStorage.getItem(k);if(!raw)return{p:0,n:""};
-    if(raw[0]==="{")return JSON.parse(raw);
+    if(raw[0]==="{"){const o=JSON.parse(raw);o.n=fixUtf8(o.n||"Anónimo");return o}
     return{p:+raw||0,n:"Anónimo"};
   }catch(e){return{p:0,n:""}}
 }
-function setRec(k,p,n){try{localStorage.setItem(k,JSON.stringify({p:p,n:n||"Anónimo"}))}catch(e){}}
+function setRec(k,p,n){try{localStorage.setItem(k,JSON.stringify({p:p,n:fixUtf8(n||"Anónimo")}))}catch(e){}}
+
+function exportRecords(){
+  const data={};
+  try{
+    for(let i=0;i<localStorage.length;i++){
+      const k=localStorage.key(i);
+      if(k&&k.indexOf("ag2-")===0)data[k]=getRec(k);
+    }
+  }catch(e){}
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="records_duelo_preguntas.json";
+  a.click();
+}
+function importRecords(){
+  const inp=document.createElement("input");
+  inp.type="file";inp.accept=".json,application/json";
+  inp.onchange=e=>{
+    const file=e.target.files[0];if(!file)return;
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      try{
+        const obj=JSON.parse(ev.target.result);
+        Object.keys(obj).forEach(k=>{
+          if(k.indexOf("ag2-")===0&&obj[k]&&obj[k].p){
+            const cur=getRec(k);
+            if(obj[k].p>cur.p)setRec(k,+obj[k].p,obj[k].n);
+          }
+        });
+        home();
+      }catch(err){}
+    };
+    reader.readAsText(file);
+  };
+  inp.click();
+}
 
 function allCategoryRankingHTML(){
   const list=AREAS.map(a=>({id:a.id,n:a.n,L:a.L})).concat([{id:"*",n:"Mezcla de todas las áreas",L:[]}]);
@@ -151,7 +228,7 @@ function allCategoryRankingHTML(){
         }
       }
       if(catId&&bestByCat[catId]&&r.p>bestByCat[catId].p){
-        bestByCat[catId]={cat:bestByCat[catId].cat,p:r.p,n:r.n||"Anónimo",cfg:`${lvStr} (${nR}×${nQ})`};
+        bestByCat[catId]={cat:bestByCat[catId].cat,p:r.p,n:fixUtf8(r.n||"Anónimo"),cfg:`${lvStr} (${nR}×${nQ})`};
       }
     }
   }catch(e){}
@@ -159,14 +236,14 @@ function allCategoryRankingHTML(){
     const b=bestByCat[c.id];
     return `<tr><td><b>${esc(b.cat)}</b></td><td>${esc(b.cfg)}</td><td>${esc(b.n)}</td><td><b>${b.p||"—"}</b></td></tr>`;
   }).join("");
-  return `<div class="card"><h3>🏆 Ranking por categorías (Mejor marca)</h3>
+  return `<div class="card"><div class="top"><h3>🏆 Ranking por categorías</h3><div class="row" style="margin-top:0"><button data-act="exprec" style="padding:4px 8px;font-size:.82rem">Exportar</button><button data-act="imprec" style="padding:4px 8px;font-size:.82rem">Importar</button></div></div>
   <div style="overflow-x:auto"><table class="rk"><thead><tr><th>Categoría</th><th>Modalidad</th><th>Jugador</th><th>Puntos</th></tr></thead><tbody>${rowsHTML}</tbody></table></div></div>`;
 }
 
 // ===== MOTOR DE PREGUNTAS =====
 const QQ=e=>{const x=BANK[e[0]][e[1]][e[2]],r=rng(e[3]);if(typeof x==="function")return x(r);const o=shr(r,x.o.map((t,k)=>[t,k]));return{q:x.q,e:x.e,o:o.map(a=>a[0]),c:o.map(a=>a[1]).indexOf(x.c)}};
 const TT=e=>AR(e[0]).T[e[1]]||30,LB=e=>AR(e[0]).n+" · "+AR(e[0]).L[e[1]];
-let MODE="off",selA="ga",selL=-1,selN=5,selR=3,tick=null,t0=0,curT=20,lastRecKey="";
+let MODE="off",selA="ga",selL=-1,selN=5,selR=3,tick=null,t0=0,curT=20,lastRecKey="",myStats={ok:0,tot:0,maxSt:0,wrong:[]};
 const pts=ms=>Math.round(1000*(1-.5*Math.min(ms,curT*1000)/(curT*1000)));
 const msg=t=>{const m=$("#msg");if(m)m.textContent=t};
 const lvOpts=()=>selA==="*"?`<option value="-1">Progresivo (fácil → difícil, en cada área)</option>`:`<option value="-1"${selL<0?" selected":""}>Progresivo (fácil → difícil)</option>`+AR(selA).L.map((l,i)=>`<option value="${i}"${selL===i?" selected":""}>${i+1}. ${l} (${AR(selA).T[i]} s)</option>`).join("");
@@ -191,13 +268,16 @@ function mkRounds(a,l,n,R){
   return out;
 }
 
-function qHTML(e,hd,s){const q=QQ(e);return `<div class="top"><span>${esc(hd)}</span><span id="sec"></span></div><div class="mut">${esc(LB(e))}</div><div class="bar"><i id="bar"></i></div><h2>${esc(q.q)}</h2><div class="opts">${q.o.map((t,k)=>`<button class="opt${s.rev&&k!==q.c?" dim":""}${s.sel===k?" sel":""}${s.rev&&k===q.c?" ok":""}" data-c="${k}"${s.dis?" disabled":""}><b>${SYM[k]}</b> ${esc(t)}</button>`).join("")}</div>`}
+function qHTML(e,hd,s){
+  const q=QQ(e),stBadge=s.st>1?` <span class="badge">🔥 Racha x${s.st}</span>`:"";
+  return `<div class="top"><span>${esc(hd)}${stBadge}</span><span id="sec"></span></div><div class="mut">${esc(LB(e))}</div><div class="bar"><i id="bar"></i></div><h2>${esc(q.q)}</h2><div class="opts">${q.o.map((t,k)=>`<button class="opt${s.rev&&k!==q.c?" dim":""}${s.sel===k?" sel":""}${s.rev&&k===q.c?" ok":""}" data-c="${k}"${s.dis?" disabled":""}><span><b>${SYM[k]}</b> ${esc(t)}</span><span class="kbd">${KEYS[k]}</span></button>`).join("")}</div>`;
+}
 function startClock(T,onEnd){clearInterval(tick);curT=T;t0=Date.now();tick=setInterval(()=>{const e=(Date.now()-t0)/1000,b=$("#bar"),s=$("#sec");if(b)b.style.width=Math.max(0,100-e/T*100)+"%";if(s)s.textContent=Math.max(0,Math.ceil(T-e))+" s";if(e>=T){clearInterval(tick);if(onEnd)onEnd()}},100)}
 
 function authCard(){
   if(USER)return "";
   return `<div class="card"><h3>Cuenta y registro de récords</h3><p class="mut">Inicie sesión con Google o con una cuenta protegida por contraseña para asociar su nombre a cada récord automáticamente.</p>
-  <div class="row"><input id="au" placeholder="Usuario" maxlength="16" autocomplete="username"><input id="ap" type="password" placeholder="Contraseña segura" autocomplete="current-password"></div>
+  <div class="row"><input id="au" placeholder="Usuario" maxlength="32" autocomplete="username"><input id="ap" type="password" placeholder="Contraseña segura" autocomplete="current-password"></div>
   <div class="row"><button class="btn" data-act="login">Iniciar sesión</button><button data-act="reg">Crear cuenta</button><span id="gbtn"></span></div>
   <div id="amsg"></div></div>`;
 }
@@ -206,18 +286,18 @@ function home(){
   clearInterval(tick);clearTimeout(hostT);if(peer){try{peer.destroy()}catch(e){}peer=null}
   conns={};conn=null;G=null;MODE="off";renderBadge();
   const curRec=getRec(recKey());
-  A.innerHTML=`<h1>Duelo de Preguntas</h1><p class="mut">Cuestionarios cronometrados para aprender y competir.</p>
+  A.innerHTML=`<h1>Duelo de Preguntas</h1><p class="mut">Cuestionarios cronometrados para aprender y competir. (Atajos en teclado: teclas 1–4 y Enter).</p>
 ${authCard()}
 <div class="card"><h3>Configuración de partida</h3>${cfg()}<p class="mut" id="recinfo">${curRec.p?`Récord actual en esta configuración: <b>${curRec.p}</b> (${esc(curRec.n)})`:"Sin récord registrado en esta configuración."}</p></div>
-<div class="card"><h3>Práctica local</h3><p class="mut">Partida individual con registro de récords.</p><button class="btn" data-act="off">Empezar</button></div>
+<div class="card"><h3>Práctica local</h3><p class="mut">Partida individual con estadísticas y registro de récords.</p><button class="btn" data-act="off">Empezar</button></div>
 <div class="card"><h3>Sala en vivo</h3><p class="mut">Todos responden a la vez; nadie avanza hasta que todos contestan (o se acaba el tiempo).<br><b>Importante para el anfitrión:</b> Al finalizar cada partida, el anfitrión debe salir de la sala (botón «Salir de la sala» o «← Inicio») y crear una nueva sala para jugar otra partida.</p>
-<input id="nm" placeholder="Su nombre" maxlength="16" value="${USER?esc(USER.n):""}" autocomplete="off"><div class="row"><button class="btn" data-act="host">Crear sala</button><input id="cd" placeholder="Código" maxlength="4" autocomplete="off" autocapitalize="characters" style="width:6em;text-transform:uppercase"><button data-act="join">Unirme</button></div><div id="msg"></div></div>
+<input id="nm" placeholder="Su nombre" maxlength="32" value="${USER?esc(USER.n):""}" autocomplete="off"><div class="row"><button class="btn" data-act="host">Crear sala</button><input id="cd" placeholder="Código" maxlength="4" autocomplete="off" autocapitalize="characters" style="width:6em;text-transform:uppercase"><button data-act="join">Unirme</button></div><div id="msg"></div></div>
 ${allCategoryRankingHTML()}`;
   initGoogle();
 }
 
 // ===== MOTOR EN VIVO Y LOCAL =====
-let peer=null,conns={},conn=null,PL={},S_={names:[],na:0,pend:[]},me="",isHost=false,G=null,code="",myA=null,key="",scores={},hostT=null,tries=0;
+let peer=null,conns={},conn=null,PL={},S_={names:[],na:0,pend:[]},me="",isHost=false,G=null,code="",myA=null,key="",recKeyDone="",scores={},hostT=null,tries=0;
 const mid=()=>isHost?"host":(peer&&peer.id);
 const vA=a=>!!(a&&G&&G.ph==="q"&&a.g===G.gid&&a.i===G.i&&a.r===G.r);
 const gQ=()=>G.rounds[G.r][G.i];
@@ -226,7 +306,7 @@ function setG(g){G=g;bc();sync()}
 function sync(){if(G&&G.ph==="q"){const k=G.gid+":"+G.r+":"+G.i;if(k!==key){key=k;myA=null;startClock(TT(gQ()),()=>{if(isHost)hostReveal();else liveView()})}}liveView()}
 function startOff(){MODE="off";isHost=true;PL={host:{n:USER?USER.n:"Jugador"}};conns={};peer=null;hostStart()}
 function enter(host){
-  const nm=$("#nm").value.trim().slice(0,16);if(!nm)return msg("Escriba su nombre.");
+  const nm=fixUtf8($("#nm").value.trim()).slice(0,32);if(!nm)return msg("Escriba su nombre.");
   if(!window.Peer)return msg("El modo en vivo necesita internet (no se pudo cargar PeerJS).");
   isHost=host;me=nm;G=null;myA=null;key="";scores={};PL={};conns={};tries=0;MODE="live";
   if(host)openHost();else{code=$("#cd").value.trim().toUpperCase();if(code.length!==4)return msg("El código tiene 4 letras.");openGuest()}}
@@ -235,7 +315,7 @@ function openHost(){
   peer.on("open",()=>{PL.host={n:me};G={ph:"lobby"};bc();liveView()});
   peer.on("error",e=>{if(e.type==="unavailable-id"&&tries++<5){try{peer.destroy()}catch(x){}openHost()}else msg("Error de red: "+e.type)});
   peer.on("connection",c=>{conns[c.peer]=c;
-    c.on("data",m=>{if(!m)return;if(m.t==="join")PL[c.peer]={n:String(m.n).slice(0,16)};else if(m.t==="ans"&&PL[c.peer])PL[c.peer].a=m.a;bc();checkAll();liveView()});
+    c.on("data",m=>{if(!m)return;if(m.t==="join")PL[c.peer]={n:fixUtf8(String(m.n)).slice(0,32)};else if(m.t==="ans"&&PL[c.peer])PL[c.peer].a=m.a;bc();checkAll();liveView()});
     c.on("close",()=>{delete conns[c.peer];delete PL[c.peer];bc();checkAll();liveView()})})}
 function openGuest(){
   msg("Conectando…");peer=new Peer();const fail=setTimeout(()=>msg("No se pudo conectar. Revise el código."),12000);
@@ -246,11 +326,14 @@ function openGuest(){
     conn.on("close",()=>{clearInterval(tick);A.innerHTML=`<div class="card"><b>El anfitrión cerró la sala o se perdió la conexión.</b></div><button class="btn" data-act="home">Volver al inicio</button>`})})}
 function hostTimer(){clearTimeout(hostT);hostT=setTimeout(hostReveal,TT(gQ())*1000+1500)}
 function checkAll(){if(!isHost||!G||G.ph!=="q")return;const v=Object.keys(PL).map(k=>PL[k]);if(v.length&&v.every(p=>vA(p.a)))hostReveal()}
-function hostStart(){const n=Math.max(1,Math.min(+$("#n").value||5,20));selN=n;scores={};Object.keys(PL).forEach(k=>{PL[k].a=null});
-  setG({ph:"q",gid:Math.random().toString(36).slice(2,7),rounds:mkRounds(selA,selL,n,selR),r:0,i:0,sc:{}});hostTimer()}
+function hostStart(){
+  const n=Math.max(1,Math.min(+$("#n").value||5,20));selN=n;scores={};myStats={ok:0,tot:0,maxSt:0,wrong:[]};recKeyDone="";
+  Object.keys(PL).forEach(k=>{PL[k].a=null});
+  setG({ph:"q",gid:Math.random().toString(36).slice(2,7),rounds:mkRounds(selA,selL,n,selR),r:0,i:0,sc:{}});hostTimer();
+}
 function hostReveal(){if(!G||G.ph!=="q")return;clearTimeout(hostT);clearInterval(tick);const q=QQ(gQ());
-  Object.keys(PL).forEach(k=>{const a=PL[k].a,pv=scores[k]||{p:0,rp:0,st:0},good=vA(a)&&a.c===q.c,st=good?pv.st+1:0,add=good?pts(a.ms)+Math.min(st-1,5)*50:0;
-    scores[k]={n:PL[k].n,p:pv.p+add,rp:pv.rp+add,st:st}});
+  Object.keys(PL).forEach(k=>{const a=PL[k].a,pv=scores[k]||{p:0,rp:0,st:0,last:0,bon:0},good=vA(a)&&a.c===q.c,st=good?pv.st+1:0,base=good?pts(a.ms):0,bon=good?Math.min(st-1,5)*50:0,add=base+bon;
+    scores[k]={n:PL[k].n,p:pv.p+add,rp:pv.rp+add,st:st,last:add,bon:bon}});
   setG(Object.assign({},G,{ph:"rev",sc:scores}))}
 function hostNext(){if(G.ph==="rev"){if(G.i+1<G.rounds[G.r].length){setG(Object.assign({},G,{ph:"q",i:G.i+1}));hostTimer()}else setG(Object.assign({},G,{ph:"pod"}));return}
   if(G.r+1<G.rounds.length){Object.keys(scores).forEach(k=>{scores[k].rp=0});setG(Object.assign({},G,{ph:"q",r:G.r+1,i:0,sc:scores}));hostTimer();return}
@@ -262,38 +345,72 @@ function hostNext(){if(G.ph==="rev"){if(G.i+1<G.rounds[G.r].length){setG(Object.
   setG(Object.assign({},G,{ph:"end",best:rec.p,bestN:rec.n,newRec:isNew}))}
 function saveRecName(){
   const inp=$("#recnm");if(!inp||!G)return;
-  const nm=inp.value.trim().slice(0,16)||"Jugador";
+  const nm=fixUtf8(inp.value.trim()).slice(0,32)||"Jugador";
   setRec(lastRecKey,G.best,nm);G.bestN=nm;G.newRec=false;
   if(scores.host)scores.host.n=nm;liveView();
 }
 function livePick(c){if(!G||G.ph!=="q"||myA||(Date.now()-t0)/1000>=curT)return;myA={i:G.i,g:G.gid,r:G.r,c:c,ms:Date.now()-t0};
   if(isHost){PL.host.a=myA;bc();checkAll()}else if(conn)conn.send({t:"ans",a:myA});liveView()}
 const rows=(sc,k)=>Object.keys(sc||{}).map(i=>[i,sc[i]]).sort((a,b)=>b[1][k]-a[1][k]);
-const board=(sc,k)=>`<ol class="bd">${rows(sc,k).map(r=>`<li class="${r[0]===mid()?"me":""}">${esc(r[1].n)} — <b>${r[1][k]}</b></li>`).join("")}</ol>`;
-function podium(sc,k){const t=rows(sc,k),H=[110,80,55],M=["🥇","🥈","🥉"];
-  return `<div class="pod">${[1,0,2].filter(i=>t[i]).map(i=>`<div class="pc"><div class="m">${M[i]}</div><div class="nm">${esc(t[i][1].n)}</div><b>${t[i][1][k]}</b><div class="st" style="height:${H[i]}px"></div></div>`).join("")}</div>`+(t.length>3?board(Object.fromEntries?Object.fromEntries(t.slice(3)):{},k):"")}
+const board=(sc,k)=>`<ol class="bd">${rows(sc,k).map((r,idx)=>`<li value="${idx+4}" class="${r[0]===mid()?"me":""}">${esc(r[1].n)} — <b>${r[1][k]}</b></li>`).join("")}</ol>`;
+
+// Podio escalado (2.° izquierda, 1.° centro, 3.° derecha) con alturas proporcionales al puntaje y peldaño
+function podium(sc,k){
+  const t=rows(sc,k);if(!t.length)return "";
+  const maxP=Math.max(1,t[0][1][k]),M=["🥇","🥈","🥉"],MAX_H=[145,108,78],MIN_H=[52,38,28];
+  const order=t.length===1?[0]:t.length===2?[1,0]:[1,0,2];
+  return `<div class="pod">${order.map(i=>{
+    const p=t[i][1],val=p[k]||0,ratio=Math.max(0,Math.min(1,val/maxP));
+    const h=Math.round(MIN_H[i]+(MAX_H[i]-MIN_H[i])*ratio);
+    return `<div class="pc r${i+1}"><div class="m">${M[i]}</div><div class="nm">${esc(p.n)}</div><div class="pts">${val} pts</div><div class="st" style="height:${h}px">${i+1}°</div></div>`;
+  }).join("")}</div>`+(t.length>3?`<div class="card">${board(Object.fromEntries(t.slice(3)),k)}</div>`:"");
+}
+
+function statsHTML(){
+  if(!myStats.tot)return "";
+  const pct=Math.round(myStats.ok/myStats.tot*100);
+  const wrongList=myStats.wrong.length?`<details style="margin-top:8px"><summary>Repasar preguntas falladas (${myStats.wrong.length})</summary>${myStats.wrong.map(w=>`<div style="border-top:1px solid var(--bd);padding:8px 0;margin-top:6px"><b>${esc(w.q)}</b><br><span style="color:#2f9e44;font-weight:600">✔ Respuesta correcta: ${esc(w.ok)}</span>${w.e?`<div class="mut" style="font-size:.9rem">${esc(w.e)}</div>`:""}</div>`).join("")}</details>`:"";
+  return `<div class="card"><h3>📊 Estadísticas de la partida</h3><p style="margin:.3em 0">Aciertos: <b>${myStats.ok}/${myStats.tot}</b> (${pct}%) · Racha máxima: <b>🔥 x${myStats.maxSt}</b></p>${wrongList}</div>`;
+}
+
 const nextBtn=t=>isHost?`<button class="btn" data-act="next">${t}</button>`:`<p class="mut">Esperando al anfitrión…</p>`;
 function liveView(){
   if(!G&&!peer)return;
   if(!G||G.ph==="lobby"){A.innerHTML=`<div class="card"><div class="mut">Código de sala</div><div class="code">${esc(code)}</div><p class="mut">Comparta el enlace de esta página y este código. Recuerde que al terminar la partida el anfitrión deberá salir de la sala para cerrar las conexiones.</p><h3>Jugadores (${S_.names.length})</h3><p>${S_.names.map(esc).join(" · ")||"…"}</p>${isHost?cfg()+`<div><button class="btn" data-act="start">Empezar</button></div>`:`<p class="mut">Esperando al anfitrión…</p>`}</div>`;return}
   const R=G.rounds.length;
   if(G.ph==="end"){
-    const promptRec=(G.newRec&&!USER)?`<div class="card good"><b>¡Nuevo récord! (${G.best} pts)</b><p class="mut">Escriba su nombre para registrar la marca:</p><div class="row"><input id="recnm" placeholder="Su nombre" maxlength="16"><button class="btn" data-act="saverec" style="margin-top:0">Guardar récord</button></div></div>`:(G.newRec?`<div class="card good"><b>¡Nuevo récord registrado a nombre de ${esc(G.bestN)}: ${G.best} pts!</b></div>`:"");
+    const promptRec=(G.newRec&&!USER)?`<div class="card good"><b>¡Nuevo récord! (${G.best} pts)</b><p class="mut">Escriba su nombre para registrar la marca:</p><div class="row"><input id="recnm" placeholder="Su nombre" maxlength="32"><button class="btn" data-act="saverec" style="margin-top:0">Guardar récord</button></div></div>`:(G.newRec?`<div class="card good"><b>¡Nuevo récord registrado a nombre de ${esc(G.bestN)}: ${G.best} pts!</b></div>`:"");
     const hostNotice=MODE==="live"?`<div class="card warn"><b>Aviso para el anfitrión:</b> La partida ha finalizado. El anfitrión debe pulsar <b>«Salir de la sala»</b> para cerrar la sesión actual antes de iniciar una nueva sala.</div>`:"";
-    A.innerHTML=`<h2>🏆 Resultado final</h2>`+podium(G.sc,"p")+promptRec+(G.best?`<p class="mut">Mejor marca en esta configuración: <b>${G.best}</b> (${esc(G.bestN)})</p>`:"")+hostNotice+`<button class="btn" data-act="home">Salir de la sala</button>`;return}
-  if(G.ph==="pod"){A.innerHTML=`<h2>Podio de la ronda ${G.r+1}/${R}</h2>`+podium(G.sc,"rp")+(R>1?`<div class="card"><h3>Acumulado</h3>${board(G.sc,"p")}</div>`:"")+nextBtn(G.r+1<R?"Siguiente ronda":"Ver resultado final");return}
+    A.innerHTML=`<h2>🏆 Resultado final</h2>`+podium(G.sc,"p")+statsHTML()+promptRec+(G.best?`<p class="mut">Mejor marca en esta configuración: <b>${G.best}</b> (${esc(G.bestN)})</p>`:"")+hostNotice+`<button class="btn" data-act="home">Salir de la sala</button>`;return}
+  if(G.ph==="pod"){A.innerHTML=`<h2>Podio de la ronda ${G.r+1}/${R}</h2>`+podium(G.sc,"rp")+(R>1?`<div class="card"><h3>Acumulado general</h3><ol class="bd">${rows(G.sc,"p").map(r=>`<li class="${r[0]===mid()?"me":""}">${esc(r[1].n)} — <b>${r[1].p}</b></li>`).join("")}</ol></div>`:"")+nextBtn(G.r+1<R?"Siguiente ronda":"Ver resultado final");return}
   const e=gQ(),q=QQ(e),n=G.rounds[G.r].length,hd=(R>1?"Ronda "+(G.r+1)+"/"+R+" · ":"")+"Pregunta "+(G.i+1)+"/"+n;
+  const mySc=(G.sc&&G.sc[mid()])||{p:0,st:0,last:0,bon:0};
   if(G.ph==="q"){const up=(Date.now()-t0)/1000>=curT;
-    A.innerHTML=qHTML(e,hd,{sel:myA?myA.c:null,dis:!!myA||up})+`<p class="mut">${myA?"Respuesta enviada. ":up?"Tiempo agotado. ":""}${S_.pend.length?"Esperando a: "+S_.pend.map(esc).join(", "):"Todos respondieron"} (${S_.na}/${S_.names.length})</p>`;return}
-  const a=myA&&myA.g===G.gid&&myA.i===G.i&&myA.r===G.r?myA:null,good=a&&a.c===q.c;
-  A.innerHTML=qHTML(e,hd,{rev:1,sel:a?a.c:-1,dis:1})+`<div class="card ${good?"good":"bad"}"><b>${good?"¡Correcto!":a?"Incorrecto":"Sin respuesta"}</b><p>${esc(q.e)}</p></div>`+(S_.names.length>1?`<div class="card"><h3>Ranking</h3>${board(G.sc,"p")}</div>`:`<p class="mut">Puntos: <b>${G.sc.host?G.sc.host.p:0}</b></p>`)+nextBtn(G.i+1<n?"Siguiente":"Ver podio de la ronda");
+    A.innerHTML=qHTML(e,hd,{sel:myA?myA.c:null,dis:!!myA||up,st:mySc.st})+`<p class="mut">${myA?"Respuesta enviada. ":up?"Tiempo agotado. ":""}${S_.pend.length?"Esperando a: "+S_.pend.map(esc).join(", "):"Todos respondieron"} (${S_.na}/${S_.names.length})</p>`;return}
+  const a=myA&&myA.g===G.gid&&myA.i===G.i&&myA.r===G.r?myA:null,good=!!(a&&a.c===q.c);
+  const rk=G.gid+":"+G.r+":"+G.i;
+  if(recKeyDone!==rk){
+    recKeyDone=rk;myStats.tot++;
+    if(good){myStats.ok++;if(mySc.st>myStats.maxSt)myStats.maxSt=mySc.st}
+    else myStats.wrong.push({q:q.q,ok:q.o[q.c],e:q.e});
+  }
+  const ptsInfo=good?` (+${mySc.last} pts${mySc.bon?`, incluye +${mySc.bon} por racha 🔥x${mySc.st}`:""})`:"";
+  A.innerHTML=qHTML(e,hd,{rev:1,sel:a?a.c:-1,dis:1,st:mySc.st})+`<div class="card ${good?"good":"bad"}"><b>${good?"¡Correcto!"+ptsInfo:a?"Incorrecto":"Tiempo agotado (sin respuesta)"}</b><p>${esc(q.e)}</p></div>`+(S_.names.length>1?`<div class="card"><h3>Ranking</h3><ol class="bd">${rows(G.sc,"p").map(r=>`<li class="${r[0]===mid()?"me":""}">${esc(r[1].n)} — <b>${r[1].p}</b>${r[1].st>1?` 🔥x${r[1].st}`:""}</li>`).join("")}</ol></div>`:`<p class="mut">Puntos acumulados: <b>${mySc.p}</b></p>`)+nextBtn(G.i+1<n?"Siguiente (Enter)":"Ver podio de la ronda (Enter)");
 }
-const ACT={off:startOff,host:()=>enter(true),join:()=>enter(false),start:hostStart,next:hostNext,home:home,reg:authReg,login:authLogin,logout:()=>{saveSession(null);home()},saverec:saveRecName};
+const ACT={off:startOff,host:()=>enter(true),join:()=>enter(false),start:hostStart,next:hostNext,home:home,reg:authReg,login:authLogin,logout:()=>{saveSession(null);home()},saverec:saveRecName,theme:toggleTheme,exprec:exportRecords,imprec:importRecords};
 document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b||b.disabled)return;
   if(b.dataset.c!==undefined){livePick(+b.dataset.c);return}
   const f=ACT[b.dataset.act];if(f)f()});
+document.addEventListener("keydown",e=>{
+  if(e.target.tagName==="INPUT"||e.target.tagName==="SELECT"||!G)return;
+  if(G.ph==="q"&&!myA){
+    const k=e.key.toUpperCase(),idx={"1":0,"2":1,"3":2,"4":3,"A":0,"B":1,"C":2,"D":3}[k];
+    if(idx!==undefined){e.preventDefault();livePick(idx)}
+  }else if((G.ph==="rev"||G.ph==="pod")&&isHost&&(e.key==="Enter"||e.key===" ")){
+    e.preventDefault();hostNext();
+  }
+});
 document.addEventListener("change",e=>{const i=e.target.id,v=e.target.value;
-  if(i==="thm"){applyTheme(v);return}
   if(i==="ar"){selA=v;selL=-1;$("#lv").innerHTML=lvOpts()}else if(i==="lv")selL=+v;else if(i==="n")selN=Math.max(3,Math.min(+v||5,20));else if(i==="rr")selR=+v;
   const ri=$("#recinfo");if(ri){const r=getRec(recKey());ri.innerHTML=r.p?`Récord actual en esta configuración: <b>${r.p}</b> (${esc(r.n)})`:"Sin récord registrado en esta configuración."}});
 home();

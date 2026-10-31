@@ -1,30 +1,83 @@
-# Duelo de matemáticas
+# Duelo de Preguntas
 
-Cuestionarios cronometrados estilo Kahoot para aprender matemáticas, solo o compitiendo en vivo.
-Sin build: `index.html` (motor) + `preguntas.js` (banco de preguntas).
+## Estructura modular del proyecto
 
-- **Áreas y niveles (23):** Geometría algebraica (6, hasta *Grothendieck*), Teoría de grafos (3), Análisis real (3),
-  Topología (3 + 2 de topología algebraica), Álgebra abstracta (6, hasta *Évariste Galois*), y una mezcla de todas.
-- **Partida completa:** 3 rondas (o una sola), con podio al final de cada ronda y podio final.
-- **Modo en vivo:** nadie avanza hasta que todos responden (o se acaba el tiempo); se muestra quién falta.
-- **Modo progresivo:** cada ronda sube de dificultad de la primera a la última pregunta.
+El banco de preguntas se encuentra dividido por carpetas de categorías y niveles (`banco/<categoria>/n<nivel>.js`), lo que facilita la adición de nuevas preguntas sin modificar el motor principal:
+
+```
+├── index.html                (Interfaz, tema claro/oscuro automático, login, ranking y motor)
+├── preguntas.js              (Cargador dinámico, motor de aleatoriedad y utilidades S, mc, ri)
+└── banco/
+    ├── ga/                   (Geometría algebraica - 6 niveles)
+    ├── gr/                   (Teoría de grafos - 3 niveles)
+    ├── ar/                   (Análisis real - 3 niveles)
+    ├── to/                   (Topología - 5 niveles)
+    ├── aa/                   (Álgebra abstracta - 6 niveles)
+    ├── vc/                   (Variable compleja - 3 niveles)
+    ├── mc/                   (Mecánica clásica - 3 niveles)
+    ├── mq/                   (Mecánica cuántica - 3 niveles)
+    ├── me/                   (Mecánica estadística - 3 niveles)
+    ├── hc/                   (Historia de Chile - 3 niveles)
+    ├── ha/                   (Historia de América - 3 niveles)
+    ├── hg/                   (Historia global - 3 niveles)
+    ├── pvz/                  (Plantas vs. Zombies - 3 niveles)
+    └── cars/                 (Saga de Cars - 3 niveles)
+
+```
+
+## Características principales
+
+* **14 categorías temáticas:** Desde matemáticas avanzadas e historia hasta cultura pop (*Plantas vs. Zombies* y *Saga de Cars*).
+
+* **Modos de juego:**
+
+  * **Práctica local:** Partida cronometrada individual con registro de récords por configuración y estadísticas detalladas de aciertos, rachas y repaso de errores.
+
+  * **Sala en vivo:** Multijugador sincronizado mediante WebRTC ([PeerJS](https://peerjs.com)); nadie avanza hasta que todos responden o se agota el tiempo.
+
+* **Autenticación:**
+
+  * Inicio de sesión con **Google** (Google Identity Services) con soporte de caracteres UTF-8.
+
+  * Registro e inicio de sesión con **contraseña segura** (cifrado SHA-256 con sal en `localStorage`).
+
+* **Tema visual automático:** Detecta el modo claro u oscuro del sistema operativo al iniciar, permitiendo alternar manualmente con el botón `☀️` / `🌙`.
+
+* **Atajos de teclado:** Teclas `1`–`4` (o `A`–`D`) para responder con rapidez y `Enter` / `Espacio` para avanzar en el modo anfitrión.
+
+* **Podio escalado dinámico:** Muestra alturas proporcionales al puntaje obtenido en cada ronda y podio final.
+
+* **Gestión de récords:** Tabla de ranking por categorías y herramientas para exportar/importar respaldos en formato `.json`.
 
 ## Publicar en GitHub Pages
 
-Sube `index.html`, `preguntas.js` y este README a un repo, y activa **Settings → Pages → Deploy from a branch → `main` / root**.
+1. Sube todos los archivos (`index.html`, `preguntas.js` y la carpeta `banco/`) a un repositorio en GitHub.
 
-## Agregar preguntas
+2. Ve a **Settings → Pages → Build and deployment**.
 
-En `preguntas.js`, dentro del arreglo del nivel (`gr0`, `aa5`, …):
+3. Selecciona la rama `main` (o `master`) y la carpeta `/ (root)`, luego pulsa **Save**.
 
-```js
-S("Enunciado", ["Correcta", "Mala 1", "Mala 2", "Mala 3"], "Explicación")
+## Instrucciones para el modo en vivo (Salas)
+
+* **Para el anfitrión:** Al terminar una partida multijugador, **el anfitrión debe salir de la sala** (pulsando *«Salir de la sala»* o *«← Inicio»*) para cerrar las conexiones previas antes de crear una nueva sala con el mismo código.
+
+* **Redes:** El modo en vivo utiliza WebRTC. Si se encuentra en una red corporativa o móvil muy restrictiva, se recomienda utilizar una red Wi-Fi estándar.
+
+## Cómo añadir o generar preguntas
+
+Para agregar preguntas a un nivel específico, edite o cree el archivo correspondiente dentro de `banco/<categoria>/n<nivel>.js` utilizando la función `reg`:
+
+```
+reg("mq", 1, [
+  S("Enunciado de la pregunta teórica...", ["Respuesta correcta", "Distractor 1", "Distractor 2", "Distractor 3"], "Explicación detallada."),
+  r => {
+    const n = ri(r, 2, 6);
+    return mc(r, "¿Enunciado con valor numérico " + n + "?", n*n, [n, 2*n, n+1], "Explicación del generador.");
+  }
+]);
+
 ```
 
-La correcta va **primero**; el motor baraja las opciones. Para variantes numéricas usa un generador
-(`r => mc(r, "enunciado", respuesta, [distractores], "explicación")`, ver ejemplos). Áreas, niveles y tiempos están en `AREAS`.
+* La respuesta correcta en `S(...)` va siempre en la primera posición del arreglo; el motor se encarga de barajarlas de forma aleatoria en cada partida.
 
-## Notas del modo en vivo
-
-Usa [PeerJS](https://peerjs.com) (WebRTC). El anfitrión lleva el ranking: si recarga, se pierde la partida.
-En algunas redes móviles muy restrictivas la conexión puede fallar; en ese caso, prueben con Wi-Fi.
+* Los generadores numéricos `r => mc(...)` permiten crear variantes matemáticas infinitas manteniendo la sincronía determinista en partidas multijugador.
