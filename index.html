@@ -4,21 +4,22 @@
 <meta name="theme-color" content="#e8590c">
 <title>Duelo de Preguntas</title>
 <style>
-:root{--bg:#fff8f1;--fg:#2b1d12;--card:#fff;--mut:#7a6556;--ac:#e8590c;--on:#fff;--bd:#f3d9c4;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media(prefers-color-scheme:dark){:root{--bg:#1a120c;--fg:#f6ebe0;--card:#261a12;--mut:#b79f8b;--ac:#ff922b;--on:#1a120c;--bd:#4a3322;color-scheme:dark}}
+:root,[data-theme="light"]{--bg:#fff8f1;--fg:#2b1d12;--card:#fff;--mut:#7a6556;--ac:#e8590c;--on:#fff;--bd:#f3d9c4;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+[data-theme="dark"]{--bg:#1a120c;--fg:#f6ebe0;--card:#261a12;--mut:#b79f8b;--ac:#ff922b;--on:#1a120c;--bd:#4a3322;color-scheme:dark}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1a120c;--fg:#f6ebe0;--card:#261a12;--mut:#b79f8b;--ac:#ff922b;--on:#1a120c;--bd:#4a3322;color-scheme:dark}}
 *{-webkit-tap-highlight-color:transparent}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
 .w{max-width:720px;margin:0 auto;padding:14px}
 h1{font-size:1.6rem;margin:.3em 0}h2{font-size:1.25rem;margin:.6em 0}h3{margin:.2em 0}
 .mut{color:var(--mut)}.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin:12px 0}
-.card.good{border:2px solid #2f9e44}.card.bad{border:2px solid #e03131}
+.card.good{border:2px solid #2f9e44}.card.bad{border:2px solid #e03131}.card.warn{border:2px solid var(--ac)}
 button,input,select{font:inherit;font-size:16px;color:var(--fg);background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:9px 12px;-webkit-appearance:none;appearance:none;touch-action:manipulation}
 select{padding-right:12px;max-width:100%}
 .btn{background:var(--ac);color:var(--on);border-color:var(--ac);font-weight:700;margin-top:8px}
 button{cursor:pointer}button:disabled{cursor:default}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}
-.top{display:flex;justify-content:space-between;font-weight:600;gap:8px}
+.top{display:flex;justify-content:space-between;font-weight:600;gap:8px;align-items:center;flex-wrap:wrap}
 .bar{height:8px;background:var(--bd);border-radius:4px;overflow:hidden;margin:6px 0}
 .bar i{display:block;height:100%;width:100%;background:var(--ac)}
 .opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -31,26 +32,47 @@ button{cursor:pointer}button:disabled{cursor:default}
 ol.bd{padding-left:1.4em}ol.bd li{margin:.2em 0}ol.bd li.me{font-weight:700;color:var(--ac)}
 #msg,#amsg{color:#e03131;min-height:1.4em;font-size:.9rem}
 .pod{display:flex;justify-content:center;align-items:flex-end;gap:10px;margin:14px 0}.pc{text-align:center;flex:1;max-width:150px;min-width:0}.pc .m{font-size:2rem}.pc .nm{font-weight:700;overflow-wrap:anywhere}.pc .st{background:var(--ac);border-radius:8px 8px 0 0;margin-top:4px}
-.badge{display:inline-block;padding:3px 8px;border-radius:6px;background:var(--bd);font-size:.85rem;font-weight:600}
+.badge{display:inline-block;padding:4px 8px;border-radius:6px;background:var(--bd);font-size:.85rem;font-weight:600}
+table.rk{width:100%;border-collapse:collapse;font-size:.92rem;margin-top:8px}
+table.rk th,table.rk td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--bd)}
+table.rk th{color:var(--mut);font-weight:600}
 </style></head><body><div class="w">
-<div class="top"><button data-act="home">← Inicio</button><span id="ubadge"></span></div>
+<div class="top">
+  <button data-act="home">← Inicio</button>
+  <div class="row" style="margin-top:0">
+    <select id="thm" title="Tema visual" style="padding:5px 8px;font-size:.85rem">
+      <option value="auto">Tema: Sistema</option>
+      <option value="light">Tema: Claro</option>
+      <option value="dark">Tema: Oscuro</option>
+    </select>
+    <span id="ubadge"></span>
+  </div>
+</div>
 <div id="app"></div></div>
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js" async></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="preguntas.js"></script>
 <script>
-// Para activar Google Sign-In en producción, reemplace con su Client ID de Google Cloud Console:
-const GOOGLE_CLIENT_ID="";
+const GOOGLE_CLIENT_ID="994362878650-s19b3fu9rvjo6ia666ld2fj0cbjle9nh.apps.googleusercontent.com";
 
 const $=s=>document.querySelector(s),A=$("#app");
 const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
 const SYM=["▲","◆","●","■"],AR=id=>AREAS.filter(a=>a.id===id)[0];
 
-// ===== AUTENTICACIÓN Y GESTIÓN DE USUARIOS =====
+// ===== TEMA CLARO / OSCURO =====
+function applyTheme(t){
+  if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t);
+  else document.documentElement.removeAttribute("data-theme");
+  try{localStorage.setItem("dp_theme",t)}catch(e){}
+  const sel=$("#thm");if(sel)sel.value=t;
+}
+applyTheme((()=>{try{return localStorage.getItem("dp_theme")||"auto"}catch(e){return "auto"}})());
+
+// ===== AUTENTICACIÓN =====
 let USER=null;
 try{USER=JSON.parse(localStorage.getItem("dp_session"))}catch(e){}
 function saveSession(u){USER=u;try{if(u)localStorage.setItem("dp_session",JSON.stringify(u));else localStorage.removeItem("dp_session")}catch(e){}renderBadge()}
-function renderBadge(){const b=$("#ubadge");if(!b)return;b.innerHTML=USER?`<span class="badge">👤 ${esc(USER.n)} (${USER.t})</span> <button data-act="logout" style="padding:4px 8px;font-size:.85rem">Salir</button>`:""}
+function renderBadge(){const b=$("#ubadge");if(!b)return;b.innerHTML=USER?`<span class="badge">👤 ${esc(USER.n)} (${USER.t})</span> <button data-act="logout" style="padding:5px 8px;font-size:.85rem">Cerrar sesión</button>`:""}
 
 async function sha256(str){
   const buf=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(str));
@@ -75,10 +97,7 @@ async function authLogin(){
   saveSession({n:r.n,t:"Cuenta"});home();
 }
 function initGoogle(){
-  const gBox=$("#gbtn");if(!gBox)return;
-  if(!GOOGLE_CLIENT_ID){
-    gBox.innerHTML=`<button data-act="gdemo">Iniciar sesión con Google</button>`;return;
-  }
+  const gBox=$("#gbtn");if(!gBox||!GOOGLE_CLIENT_ID)return;
   if(window.google&&google.accounts&&google.accounts.id){
     google.accounts.id.initialize({
       client_id:GOOGLE_CLIENT_ID,
@@ -90,14 +109,12 @@ function initGoogle(){
       }
     });
     google.accounts.id.renderButton(gBox,{theme:"outline",size:"large"});
+  }else{
+    setTimeout(initGoogle,400);
   }
 }
-function googleFallback(){
-  const m=$("#amsg");
-  if(!GOOGLE_CLIENT_ID&&m)m.textContent="Configure GOOGLE_CLIENT_ID en index.html para OAuth real, o use el acceso con contraseña segura.";
-}
 
-// ===== GESTIÓN DE RÉCORDS =====
+// ===== GESTIÓN DE RÉCORDS Y RANKING GLOBAL =====
 function recKey(){return "ag2-"+selA+selL+"-"+selN+"-"+selR}
 function getRec(k){
   try{
@@ -108,6 +125,44 @@ function getRec(k){
 }
 function setRec(k,p,n){try{localStorage.setItem(k,JSON.stringify({p:p,n:n||"Anónimo"}))}catch(e){}}
 
+function allCategoryRankingHTML(){
+  const list=AREAS.map(a=>({id:a.id,n:a.n,L:a.L})).concat([{id:"*",n:"Mezcla de todas las áreas",L:[]}]);
+  const bestByCat={};
+  list.forEach(c=>{bestByCat[c.id]={cat:c.n,p:0,n:"—",cfg:"Sin marca"}});
+  try{
+    for(let idx=0;idx<localStorage.length;idx++){
+      const k=localStorage.key(idx);
+      if(!k||k.indexOf("ag2-")!==0)continue;
+      const r=getRec(k);if(!r||!r.p)continue;
+      const body=k.slice(4),parts=body.split("-");
+      if(parts.length<3)continue;
+      const nQ=parts[parts.length-2],nR=parts[parts.length-1],al=parts.slice(0,parts.length-2).join("-");
+      let catId="",lvStr="";
+      if(al.indexOf("*")===0){catId="*";lvStr="Progresivo"}
+      else{
+        for(let j=0;j<AREAS.length;j++){
+          const aid=AREAS[j].id;
+          if(al.indexOf(aid)===0){
+            catId=aid;
+            const lv=+al.slice(aid.length);
+            lvStr=lv<0?"Progresivo":(AREAS[j].L[lv]||("Nivel "+(lv+1)));
+            break;
+          }
+        }
+      }
+      if(catId&&bestByCat[catId]&&r.p>bestByCat[catId].p){
+        bestByCat[catId]={cat:bestByCat[catId].cat,p:r.p,n:r.n||"Anónimo",cfg:`${lvStr} (${nR}×${nQ})`};
+      }
+    }
+  }catch(e){}
+  const rowsHTML=list.map(c=>{
+    const b=bestByCat[c.id];
+    return `<tr><td><b>${esc(b.cat)}</b></td><td>${esc(b.cfg)}</td><td>${esc(b.n)}</td><td><b>${b.p||"—"}</b></td></tr>`;
+  }).join("");
+  return `<div class="card"><h3>🏆 Ranking por categorías (Mejor marca)</h3>
+  <div style="overflow-x:auto"><table class="rk"><thead><tr><th>Categoría</th><th>Modalidad</th><th>Jugador</th><th>Puntos</th></tr></thead><tbody>${rowsHTML}</tbody></table></div></div>`;
+}
+
 // ===== MOTOR DE PREGUNTAS =====
 const QQ=e=>{const x=BANK[e[0]][e[1]][e[2]],r=rng(e[3]);if(typeof x==="function")return x(r);const o=shr(r,x.o.map((t,k)=>[t,k]));return{q:x.q,e:x.e,o:o.map(a=>a[0]),c:o.map(a=>a[1]).indexOf(x.c)}};
 const TT=e=>AR(e[0]).T[e[1]]||30,LB=e=>AR(e[0]).n+" · "+AR(e[0]).L[e[1]];
@@ -117,10 +172,24 @@ const msg=t=>{const m=$("#msg");if(m)m.textContent=t};
 const lvOpts=()=>selA==="*"?`<option value="-1">Progresivo (fácil → difícil, en cada área)</option>`:`<option value="-1"${selL<0?" selected":""}>Progresivo (fácil → difícil)</option>`+AR(selA).L.map((l,i)=>`<option value="${i}"${selL===i?" selected":""}>${i+1}. ${l} (${AR(selA).T[i]} s)</option>`).join("");
 const cfg=()=>`<select id="ar">${AREAS.map(a=>`<option value="${a.id}"${a.id===selA?" selected":""}>${a.n}</option>`).join("")}<option value="*"${selA==="*"?" selected":""}>Mezcla de todas las áreas</option></select> <select id="lv">${lvOpts()}</select><div class="row"><label>Preguntas por ronda <input id="n" type="number" value="${selN}" min="3" max="20" style="width:4.5em"></label><select id="rr"><option value="3"${selR===3?" selected":""}>Partida completa (3 rondas)</option><option value="1"${selR===1?" selected":""}>Una sola ronda</option></select></div>`;
 
-function mkRounds(a,l,n,R){const used={},out=[];for(let r=0;r<R;r++){const rd=[];for(let j=0;j<n;j++){
-  const aa=a==="*"?AREAS[Math.random()*AREAS.length|0].id:a,nl=AR(aa).L.length,ll=(l<0||a==="*")?Math.min(nl-1,Math.floor(j/n*nl)):l;
-  const pool=BANK[aa][ll],free=[];pool.forEach((x,i)=>{if(typeof x==="function"||!used[aa+ll+i])free.push(i)});
-  const i=free.length?free[Math.random()*free.length|0]:Math.random()*pool.length|0;used[aa+ll+i]=1;rd.push([aa,ll,i,Math.random()*1e9|0])}out.push(rd)}return out}
+function mkRounds(a,l,n,R){
+  const avail=AREAS.filter(x=>(BANK[x.id]||[]).some(arr=>arr&&arr.length));
+  const used={},out=[];
+  for(let r=0;r<R;r++){
+    const rd=[];
+    for(let j=0;j<n;j++){
+      const aa=a==="*"?avail[Math.random()*avail.length|0].id:a,nl=AR(aa).L.length;
+      let ll=(l<0||a==="*")?Math.min(nl-1,Math.floor(j/n*nl)):l;
+      let pool=(BANK[aa]&&BANK[aa][ll])||[];
+      if(!pool.length){for(let k=0;k<nl;k++)if(BANK[aa]&&BANK[aa][k]&&BANK[aa][k].length){ll=k;pool=BANK[aa][k];break}}
+      const free=[];pool.forEach((x,i)=>{if(typeof x==="function"||!used[aa+ll+i])free.push(i)});
+      const i=free.length?free[Math.random()*free.length|0]:Math.random()*pool.length|0;
+      used[aa+ll+i]=1;rd.push([aa,ll,i,Math.random()*1e9|0]);
+    }
+    out.push(rd);
+  }
+  return out;
+}
 
 function qHTML(e,hd,s){const q=QQ(e);return `<div class="top"><span>${esc(hd)}</span><span id="sec"></span></div><div class="mut">${esc(LB(e))}</div><div class="bar"><i id="bar"></i></div><h2>${esc(q.q)}</h2><div class="opts">${q.o.map((t,k)=>`<button class="opt${s.rev&&k!==q.c?" dim":""}${s.sel===k?" sel":""}${s.rev&&k===q.c?" ok":""}" data-c="${k}"${s.dis?" disabled":""}><b>${SYM[k]}</b> ${esc(t)}</button>`).join("")}</div>`}
 function startClock(T,onEnd){clearInterval(tick);curT=T;t0=Date.now();tick=setInterval(()=>{const e=(Date.now()-t0)/1000,b=$("#bar"),s=$("#sec");if(b)b.style.width=Math.max(0,100-e/T*100)+"%";if(s)s.textContent=Math.max(0,Math.ceil(T-e))+" s";if(e>=T){clearInterval(tick);if(onEnd)onEnd()}},100)}
@@ -141,8 +210,9 @@ function home(){
 ${authCard()}
 <div class="card"><h3>Configuración de partida</h3>${cfg()}<p class="mut" id="recinfo">${curRec.p?`Récord actual en esta configuración: <b>${curRec.p}</b> (${esc(curRec.n)})`:"Sin récord registrado en esta configuración."}</p></div>
 <div class="card"><h3>Práctica local</h3><p class="mut">Partida individual con registro de récords.</p><button class="btn" data-act="off">Empezar</button></div>
-<div class="card"><h3>Sala en vivo</h3><p class="mut">Todos responden a la vez; nadie avanza hasta que todos contestan (o se acaba el tiempo).</p>
-<input id="nm" placeholder="Su nombre" maxlength="16" value="${USER?esc(USER.n):""}" autocomplete="off"><div class="row"><button class="btn" data-act="host">Crear sala</button><input id="cd" placeholder="Código" maxlength="4" autocomplete="off" autocapitalize="characters" style="width:6em;text-transform:uppercase"><button data-act="join">Unirme</button></div><div id="msg"></div></div>`;
+<div class="card"><h3>Sala en vivo</h3><p class="mut">Todos responden a la vez; nadie avanza hasta que todos contestan (o se acaba el tiempo).<br><b>Importante para el anfitrión:</b> Al finalizar cada partida, el anfitrión debe salir de la sala (botón «Salir de la sala» o «← Inicio») y crear una nueva sala para jugar otra partida.</p>
+<input id="nm" placeholder="Su nombre" maxlength="16" value="${USER?esc(USER.n):""}" autocomplete="off"><div class="row"><button class="btn" data-act="host">Crear sala</button><input id="cd" placeholder="Código" maxlength="4" autocomplete="off" autocapitalize="characters" style="width:6em;text-transform:uppercase"><button data-act="join">Unirme</button></div><div id="msg"></div></div>
+${allCategoryRankingHTML()}`;
   initGoogle();
 }
 
@@ -173,7 +243,7 @@ function openGuest(){
   peer.on("open",()=>{conn=peer.connect("agq-"+code,{reliable:true});
     conn.on("open",()=>{clearTimeout(fail);conn.send({t:"join",n:me})});
     conn.on("data",m=>{if(m&&m.t==="s"){S_=m;G=m.g;sync()}});
-    conn.on("close",()=>{clearInterval(tick);A.innerHTML=`<div class="card"><b>Se perdió la conexión con el anfitrión.</b></div><button class="btn" data-act="home">Inicio</button>`})})}
+    conn.on("close",()=>{clearInterval(tick);A.innerHTML=`<div class="card"><b>El anfitrión cerró la sala o se perdió la conexión.</b></div><button class="btn" data-act="home">Volver al inicio</button>`})})}
 function hostTimer(){clearTimeout(hostT);hostT=setTimeout(hostReveal,TT(gQ())*1000+1500)}
 function checkAll(){if(!isHost||!G||G.ph!=="q")return;const v=Object.keys(PL).map(k=>PL[k]);if(v.length&&v.every(p=>vA(p.a)))hostReveal()}
 function hostStart(){const n=Math.max(1,Math.min(+$("#n").value||5,20));selN=n;scores={};Object.keys(PL).forEach(k=>{PL[k].a=null});
@@ -205,11 +275,12 @@ function podium(sc,k){const t=rows(sc,k),H=[110,80,55],M=["🥇","🥈","🥉"];
 const nextBtn=t=>isHost?`<button class="btn" data-act="next">${t}</button>`:`<p class="mut">Esperando al anfitrión…</p>`;
 function liveView(){
   if(!G&&!peer)return;
-  if(!G||G.ph==="lobby"){A.innerHTML=`<div class="card"><div class="mut">Código de sala</div><div class="code">${esc(code)}</div><p class="mut">Comparta el enlace de esta página y este código.</p><h3>Jugadores (${S_.names.length})</h3><p>${S_.names.map(esc).join(" · ")||"…"}</p>${isHost?cfg()+`<div><button class="btn" data-act="start">Empezar</button></div>`:`<p class="mut">Esperando al anfitrión…</p>`}</div>`;return}
+  if(!G||G.ph==="lobby"){A.innerHTML=`<div class="card"><div class="mut">Código de sala</div><div class="code">${esc(code)}</div><p class="mut">Comparta el enlace de esta página y este código. Recuerde que al terminar la partida el anfitrión deberá salir de la sala para cerrar las conexiones.</p><h3>Jugadores (${S_.names.length})</h3><p>${S_.names.map(esc).join(" · ")||"…"}</p>${isHost?cfg()+`<div><button class="btn" data-act="start">Empezar</button></div>`:`<p class="mut">Esperando al anfitrión…</p>`}</div>`;return}
   const R=G.rounds.length;
   if(G.ph==="end"){
     const promptRec=(G.newRec&&!USER)?`<div class="card good"><b>¡Nuevo récord! (${G.best} pts)</b><p class="mut">Escriba su nombre para registrar la marca:</p><div class="row"><input id="recnm" placeholder="Su nombre" maxlength="16"><button class="btn" data-act="saverec" style="margin-top:0">Guardar récord</button></div></div>`:(G.newRec?`<div class="card good"><b>¡Nuevo récord registrado a nombre de ${esc(G.bestN)}: ${G.best} pts!</b></div>`:"");
-    A.innerHTML=`<h2>🏆 Resultado final</h2>`+podium(G.sc,"p")+promptRec+(G.best?`<p class="mut">Mejor marca en esta configuración: <b>${G.best}</b> (${esc(G.bestN)})</p>`:"")+`<button class="btn" data-act="home">Salir</button>`;return}
+    const hostNotice=MODE==="live"?`<div class="card warn"><b>Aviso para el anfitrión:</b> La partida ha finalizado. El anfitrión debe pulsar <b>«Salir de la sala»</b> para cerrar la sesión actual antes de iniciar una nueva sala.</div>`:"";
+    A.innerHTML=`<h2>🏆 Resultado final</h2>`+podium(G.sc,"p")+promptRec+(G.best?`<p class="mut">Mejor marca en esta configuración: <b>${G.best}</b> (${esc(G.bestN)})</p>`:"")+hostNotice+`<button class="btn" data-act="home">Salir de la sala</button>`;return}
   if(G.ph==="pod"){A.innerHTML=`<h2>Podio de la ronda ${G.r+1}/${R}</h2>`+podium(G.sc,"rp")+(R>1?`<div class="card"><h3>Acumulado</h3>${board(G.sc,"p")}</div>`:"")+nextBtn(G.r+1<R?"Siguiente ronda":"Ver resultado final");return}
   const e=gQ(),q=QQ(e),n=G.rounds[G.r].length,hd=(R>1?"Ronda "+(G.r+1)+"/"+R+" · ":"")+"Pregunta "+(G.i+1)+"/"+n;
   if(G.ph==="q"){const up=(Date.now()-t0)/1000>=curT;
@@ -217,11 +288,12 @@ function liveView(){
   const a=myA&&myA.g===G.gid&&myA.i===G.i&&myA.r===G.r?myA:null,good=a&&a.c===q.c;
   A.innerHTML=qHTML(e,hd,{rev:1,sel:a?a.c:-1,dis:1})+`<div class="card ${good?"good":"bad"}"><b>${good?"¡Correcto!":a?"Incorrecto":"Sin respuesta"}</b><p>${esc(q.e)}</p></div>`+(S_.names.length>1?`<div class="card"><h3>Ranking</h3>${board(G.sc,"p")}</div>`:`<p class="mut">Puntos: <b>${G.sc.host?G.sc.host.p:0}</b></p>`)+nextBtn(G.i+1<n?"Siguiente":"Ver podio de la ronda");
 }
-const ACT={off:startOff,host:()=>enter(true),join:()=>enter(false),start:hostStart,next:hostNext,home:home,reg:authReg,login:authLogin,logout:()=>{saveSession(null);home()},gdemo:googleFallback,saverec:saveRecName};
+const ACT={off:startOff,host:()=>enter(true),join:()=>enter(false),start:hostStart,next:hostNext,home:home,reg:authReg,login:authLogin,logout:()=>{saveSession(null);home()},saverec:saveRecName};
 document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b||b.disabled)return;
   if(b.dataset.c!==undefined){livePick(+b.dataset.c);return}
   const f=ACT[b.dataset.act];if(f)f()});
 document.addEventListener("change",e=>{const i=e.target.id,v=e.target.value;
+  if(i==="thm"){applyTheme(v);return}
   if(i==="ar"){selA=v;selL=-1;$("#lv").innerHTML=lvOpts()}else if(i==="lv")selL=+v;else if(i==="n")selN=Math.max(3,Math.min(+v||5,20));else if(i==="rr")selR=+v;
   const ri=$("#recinfo");if(ri){const r=getRec(recKey());ri.innerHTML=r.p?`Récord actual en esta configuración: <b>${r.p}</b> (${esc(r.n)})`:"Sin récord registrado en esta configuración."}});
 home();
