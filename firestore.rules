@@ -1,0 +1,18 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function ok(d) {
+      return d.keys().hasOnly(['n','p','t'])
+        && d.n is string && d.n.size() > 0 && d.n.size() <= 64
+        && d.n == request.auth.token.name
+        && d.p is int && d.p > 0 && d.p <= 75000
+        && d.t == request.time;
+    }
+    match /rank/{cfg}/scores/{uid} {
+      allow read: if true;
+      allow create: if request.auth != null && request.auth.uid == uid && ok(request.resource.data);
+      allow update: if request.auth != null && request.auth.uid == uid && ok(request.resource.data)
+                    && request.resource.data.p > resource.data.p;
+    }
+  }
+}
